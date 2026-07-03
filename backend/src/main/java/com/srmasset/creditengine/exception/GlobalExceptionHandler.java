@@ -34,7 +34,8 @@ public class GlobalExceptionHandler {
   @ExceptionHandler({
     RecebivelJaLiquidadoException.class,
     EstornoInvalidoException.class,
-    ConflitoConcorrenciaException.class
+    ConflitoConcorrenciaException.class,
+    CedenteDuplicadoException.class
   })
   public ResponseEntity<ErroResponse> handleConflito(NegocioException ex, HttpServletRequest req) {
     return build(HttpStatus.CONFLICT, ex, req);
