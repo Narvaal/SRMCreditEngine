@@ -27,6 +27,11 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:$springdocOpenapiVersion")
 
+    // --- Precificação ---
+    // BigDecimal.pow() nativo só aceita expoente inteiro; o prazo (meses) é fracionário.
+    // big-math resolve potência fracionária inteiramente em BigDecimal (via exp/ln), sem cair pra double.
+    implementation("ch.obermuhlner:big-math:2.3.2")
+
     // --- Persistência ---
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.flywaydb:flyway-core")
