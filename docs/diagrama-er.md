@@ -7,7 +7,7 @@ Modelo de dados implementado nas migrations Flyway em [`backend/src/main/resourc
 ```mermaid
 erDiagram
     MOEDA {
-        char_3 codigo PK
+        varchar_3 codigo PK
         varchar nome
         smallint casas_decimais
     }
@@ -31,15 +31,15 @@ erDiagram
 
     TAXA_CAMBIO {
         uuid id PK
-        char_3 moeda_origem FK
-        char_3 moeda_destino FK
+        varchar_3 moeda_origem FK
+        varchar_3 moeda_destino FK
         numeric valor
         timestamptz vigente_em
     }
 
     TAXA_MERCADO {
         uuid id PK
-        char_3 moeda_codigo FK
+        varchar_3 moeda_codigo FK
         varchar indicador
         numeric valor
         timestamptz vigente_em
@@ -51,14 +51,14 @@ erDiagram
         varchar tipo_recebivel_codigo FK
         uuid lote_importacao_id FK
         numeric valor_face
-        char_3 moeda_titulo FK
+        varchar_3 moeda_titulo FK
         date data_vencimento
         varchar status
         bigint version
     }
 
     CAIXA {
-        char_3 moeda_codigo PK_FK
+        varchar_3 moeda_codigo PK_FK
         numeric saldo
         bigint version
     }
@@ -70,13 +70,13 @@ erDiagram
         varchar tipo
         uuid liquidacao_estornada_id FK
         numeric valor_face
-        char_3 moeda_titulo FK
+        varchar_3 moeda_titulo FK
         numeric taxa_base_usada
         uuid taxa_base_ref_id FK
         numeric spread_usado
         numeric prazo_meses_usado
         numeric valor_presente
-        char_3 moeda_pagamento FK
+        varchar_3 moeda_pagamento FK
         numeric taxa_cambio_usada
         uuid taxa_cambio_ref_id FK
         numeric valor_liquido

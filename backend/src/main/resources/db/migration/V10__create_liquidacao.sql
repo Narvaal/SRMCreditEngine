@@ -10,7 +10,7 @@ CREATE TABLE liquidacao (
     -- Snapshot dos insumos do cálculo: valor guardado diretamente (leitura sem join)
     -- + FK para a fonte (rastreabilidade/auditoria) onde aplicável.
     valor_face                  NUMERIC(18,2) NOT NULL CHECK (valor_face > 0),
-    moeda_titulo                CHAR(3) NOT NULL REFERENCES moeda(codigo),
+    moeda_titulo                VARCHAR(3) NOT NULL REFERENCES moeda(codigo),
 
     taxa_base_usada             NUMERIC(9,6) NOT NULL,
     taxa_base_ref_id            UUID NOT NULL REFERENCES taxa_mercado(id),
@@ -18,7 +18,7 @@ CREATE TABLE liquidacao (
     prazo_meses_usado           NUMERIC(9,4) NOT NULL,
     valor_presente              NUMERIC(20,6) NOT NULL,
 
-    moeda_pagamento             CHAR(3) NOT NULL REFERENCES moeda(codigo),
+    moeda_pagamento             VARCHAR(3) NOT NULL REFERENCES moeda(codigo),
     taxa_cambio_usada           NUMERIC(19,8),
     taxa_cambio_ref_id          UUID REFERENCES taxa_cambio(id),
 

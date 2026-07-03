@@ -4,7 +4,7 @@ CREATE TABLE recebivel (
     tipo_recebivel_codigo   VARCHAR(50) NOT NULL REFERENCES tipo_recebivel(codigo),
     lote_importacao_id      UUID REFERENCES lote_importacao(id),
     valor_face              NUMERIC(18,2) NOT NULL CHECK (valor_face > 0),
-    moeda_titulo            CHAR(3) NOT NULL REFERENCES moeda(codigo),
+    moeda_titulo            VARCHAR(3) NOT NULL REFERENCES moeda(codigo),
     data_vencimento         DATE NOT NULL,
     -- 3 estados (não 2): depois de um estorno o recebível pode ser liquidado de novo,
     -- e ESTORNADO preserva essa distinção semântica em vez de voltar a PENDENTE em silêncio.

@@ -2,7 +2,7 @@
 -- Mesma lógica de taxa_cambio: taxa externa, varia no tempo, nunca editada.
 CREATE TABLE taxa_mercado (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    moeda_codigo    CHAR(3) NOT NULL REFERENCES moeda(codigo),
+    moeda_codigo    VARCHAR(3) NOT NULL REFERENCES moeda(codigo),
     indicador       VARCHAR(20) NOT NULL,   -- ex: 'CDI', 'SOFR'
     valor           NUMERIC(9,6) NOT NULL,  -- taxa ao mês, ex: 0.010000 = 1% a.m.
     vigente_em      TIMESTAMPTZ NOT NULL,
