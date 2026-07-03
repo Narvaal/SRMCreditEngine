@@ -1,0 +1,4 @@
+{
+  "frontend/**/*.{ts,tsx,js,jsx}": "bash -c 'cd frontend && npx oxlint'",
+  "backend/**/*.java": "bash -c 'cd backend && ./gradlew spotlessCheck -q'"
+}

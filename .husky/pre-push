@@ -1,0 +1,7 @@
+set -e
+
+echo "==> Rodando testes do backend (JUnit)"
+(cd backend && ./gradlew test -q)
+
+echo "==> Rodando testes do frontend"
+(cd frontend && npm test)

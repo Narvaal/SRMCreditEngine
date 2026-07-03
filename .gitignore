@@ -4,6 +4,9 @@ backend/build/
 backend/out/
 !backend/gradle/wrapper/gradle-wrapper.jar
 
+# --- Node (root tooling + frontend) ---
+node_modules/
+
 # --- Frontend (Node / React) ---
 frontend/node_modules/
 frontend/dist/
