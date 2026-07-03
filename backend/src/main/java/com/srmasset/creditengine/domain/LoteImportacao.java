@@ -13,6 +13,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.Generated;
+import org.hibernate.generator.EventType;
 
 /**
  * Rastreia de qual submissão cada {@link Recebivel} veio; a liquidação continua sendo sempre por
@@ -35,6 +37,7 @@ public class LoteImportacao {
   @Column(name = "origem", nullable = false, length = 50)
   private String origem;
 
+  @Generated(event = EventType.INSERT)
   @Column(name = "criado_em", nullable = false, insertable = false, updatable = false)
   private Instant criadoEm;
 }

@@ -17,6 +17,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.Generated;
+import org.hibernate.generator.EventType;
 
 /**
  * Histórico append-only de taxas de mercado (CDI para BRL, SOFR para USD) — taxa externa, o fundo
@@ -49,6 +51,7 @@ public class TaxaMercado {
   @Column(name = "vigente_em", nullable = false)
   private Instant vigenteEm;
 
+  @Generated(event = EventType.INSERT)
   @Column(name = "criado_em", nullable = false, insertable = false, updatable = false)
   private Instant criadoEm;
 }

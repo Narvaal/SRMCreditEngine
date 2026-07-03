@@ -10,6 +10,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.Generated;
+import org.hibernate.generator.EventType;
 
 /**
  * Catálogo puro: o spread de risco não mora aqui, mora exclusivamente na implementação de {@link
@@ -34,6 +36,7 @@ public class TipoRecebivel {
   @Column(name = "ativo", nullable = false)
   private Boolean ativo;
 
+  @Generated(event = EventType.INSERT)
   @Column(name = "criado_em", nullable = false, insertable = false, updatable = false)
   private Instant criadoEm;
 }

@@ -10,6 +10,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.Generated;
+import org.hibernate.generator.EventType;
 
 @Entity
 @Table(name = "moeda")
@@ -28,8 +30,9 @@ public class Moeda {
   private String nome;
 
   @Column(name = "casas_decimais", nullable = false)
-  private Integer casasDecimais;
+  private Short casasDecimais;
 
+  @Generated(event = EventType.INSERT)
   @Column(name = "criado_em", nullable = false, insertable = false, updatable = false)
   private Instant criadoEm;
 }

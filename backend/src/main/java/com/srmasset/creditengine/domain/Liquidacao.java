@@ -19,6 +19,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.Generated;
+import org.hibernate.generator.EventType;
 
 /**
  * Ledger append-only: nunca UPDATE/DELETE. Correção de erro = nova linha ESTORNO referenciando a
@@ -94,6 +96,7 @@ public class Liquidacao {
   @Column(name = "valor_liquido", nullable = false, precision = 18, scale = 2)
   private BigDecimal valorLiquido;
 
+  @Generated(event = EventType.INSERT)
   @Column(name = "criado_em", nullable = false, insertable = false, updatable = false)
   private Instant criadoEm;
 }

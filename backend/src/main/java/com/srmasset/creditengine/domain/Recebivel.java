@@ -21,6 +21,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.Generated;
+import org.hibernate.generator.EventType;
 
 /**
  * {@link #status} e {@link #version} são o estado corrente projetado, atualizado atomicamente junto
@@ -71,6 +73,7 @@ public class Recebivel {
   @Column(name = "version", nullable = false)
   private Long version;
 
+  @Generated(event = EventType.INSERT)
   @Column(name = "criado_em", nullable = false, insertable = false, updatable = false)
   private Instant criadoEm;
 }
