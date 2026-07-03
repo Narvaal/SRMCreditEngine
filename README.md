@@ -23,6 +23,8 @@ Monorepo:
 /backend    → API, regras de negócio e persistência (Java / Spring / Gradle)
 /frontend   → Painel do Operador e Grid de Transações (TypeScript / React / Vite)
 /docs       → Diagrama ER, DDL, diagrama C4, ADRs — conforme o roadmap avança
+/infra      → Configuração de Prometheus e Grafana (provisionamento, scrape config)
+docker-compose.yml → orquestra API + PostgreSQL + Prometheus + Grafana
 ```
 
 ## Status atual
@@ -32,14 +34,35 @@ Monorepo:
 - [x] Projeto do frontend criado (React + TypeScript + Vite)
 - [x] Git hooks (Husky): pre-commit (lint/format), commit-msg (Conventional Commits), pre-push (testes)
 - [x] Modelo de dados (Diagrama ER + DDL) e migrations Flyway — ver [`docs/diagrama-er.md`](./docs/diagrama-er.md)
+- [x] `docker-compose` (API + PostgreSQL + Prometheus + Grafana) — validado de ponta a ponta
 - [ ] Camadas de aplicação / negócio / persistência e motor de precificação (Strategy Pattern)
-- [ ] `docker-compose` (API + PostgreSQL + Prometheus + Grafana)
 - [ ] Painel do Operador e Grid de Transações (telas reais)
-- [ ] CI/CD, testes, git hooks
+- [ ] CI/CD
 
-## Como rodar (backend)
+## Como rodar (stack completa: API + banco + observabilidade)
 
-Pré-requisitos: Java 21 e um PostgreSQL acessível (`docker-compose` para orquestrar isso ainda será adicionado — por enquanto, aponte para uma instância local via variáveis de ambiente).
+Pré-requisito: Docker + Docker Compose.
+
+```bash
+docker compose up -d --build
+```
+
+Sobe 4 containers: `postgres` (aplica as 11 migrations Flyway automaticamente no boot da API), `backend`, `prometheus` e `grafana`.
+
+| Serviço | URL | Notas |
+|---|---|---|
+| API | http://localhost:8080 | |
+| Swagger UI | http://localhost:8080/swagger-ui/index.html | |
+| Health check | http://localhost:8080/actuator/health | |
+| Métricas (Prometheus scrape) | http://localhost:8080/actuator/prometheus | |
+| Prometheus | http://localhost:9090 | target `srm-credit-engine` já configurado |
+| Grafana | http://localhost:3000 | login `admin` / `admin`; datasource do Prometheus já provisionado |
+
+Para derrubar tudo (incluindo os volumes de dados): `docker compose down -v`.
+
+## Como rodar (backend isolado, sem Docker)
+
+Pré-requisitos: Java 21 e um PostgreSQL acessível.
 
 ```bash
 cd backend
@@ -52,15 +75,8 @@ export DB_USER=srm
 export DB_PASSWORD=srm
 
 ./gradlew build     # compila e roda os testes
-./gradlew bootRun   # sobe a aplicação em http://localhost:8080
+./gradlew bootRun   # sobe a aplicação em http://localhost:8080, aplicando as migrations automaticamente
 ```
-
-Com a aplicação no ar:
-- Swagger UI: `http://localhost:8080/swagger-ui.html`
-- Métricas Prometheus: `http://localhost:8080/actuator/prometheus`
-- Health check: `http://localhost:8080/actuator/health`
-
-> Ainda não há entidades/migrations — a aplicação sobe, mas o modelo de dados é o próximo passo (ver `ROADMAP.md`).
 
 ## Como rodar (frontend)
 

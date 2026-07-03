@@ -115,4 +115,10 @@ Três decisões de escopo fechadas nesta etapa:
 
 Gaps documentados como escopo futuro (não implementados agora, ver `docs/diagrama-er.md` para detalhes): tabela `movimento_caixa` separada (ledger de efeito-no-caixa desacoplado do ledger de precificação), coluna de autoria (`criado_por` — não há sistema de usuário/auth ainda), mecanismo de aporte/capitalização de caixa, e particionamento de `liquidacao` por período (prematuro para o volume atual).
 
+### Passo 4 — `docker-compose` (API + PostgreSQL + Prometheus + Grafana) _(concluído)_
+
+`docker-compose.yml` na raiz sobe 4 serviços: `postgres` (17), `backend` (`backend/Dockerfile`, build multi-stage com Gradle), `prometheus` (`infra/prometheus/prometheus.yml` já configurado pra fazer scrape de `/actuator/prometheus`) e `grafana` (`infra/grafana/provisioning/` já provisiona o datasource do Prometheus automaticamente).
+
+Validado de ponta a ponta, incluindo um ciclo completo `docker compose down -v` + `up -d` do zero (sem cache/estado anterior) pra garantir reprodutibilidade: as 11 migrations aplicam automaticamente no boot da API, `/actuator/health` responde `UP`, o Prometheus reporta o target `srm-credit-engine` como `up`, e o Grafana já enxerga o datasource do Prometheus sem configuração manual.
+
 **Próximo:** camada de aplicação — entidades JPA, repositórios, motor de precificação (Strategy Pattern) e contratos de API (endpoints REST + OpenAPI).
