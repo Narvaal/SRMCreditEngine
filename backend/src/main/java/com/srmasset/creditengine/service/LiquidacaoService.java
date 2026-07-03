@@ -24,6 +24,7 @@ import com.srmasset.creditengine.repository.LiquidacaoRepository;
 import com.srmasset.creditengine.repository.MoedaRepository;
 import com.srmasset.creditengine.repository.RecebivelRepository;
 import java.math.BigDecimal;
+import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
@@ -73,21 +74,16 @@ public class LiquidacaoService {
         motorPrecificacao.calcularValorPresente(
             recebivel.getValorFace(), taxaMercado.getValor(), spread, prazoMeses);
 
-    TaxaCambio taxaCambio = null;
-    BigDecimal taxaCambioUsada = null;
-    BigDecimal valorLiquido;
-    if (moedaTituloCodigo.equals(moedaPagamentoCodigo)) {
-      valorLiquido =
-          valorPresente.setScale(Precisao.ESCALA_VALOR_MONETARIO, Precisao.ARREDONDAMENTO);
-    } else {
-      // Conversão acontece DEPOIS do deságio — nunca antes (ver ROADMAP.md).
-      taxaCambio = cambioService.buscarTaxaVigente(moedaTituloCodigo, moedaPagamentoCodigo);
-      taxaCambioUsada = taxaCambio.getValor();
-      valorLiquido =
-          valorPresente
-              .multiply(taxaCambioUsada)
-              .setScale(Precisao.ESCALA_VALOR_MONETARIO, Precisao.ARREDONDAMENTO);
-    }
+    // Conversão acontece DEPOIS do deságio — nunca antes (ver ROADMAP.md).
+    Optional<TaxaCambio> taxaCambioOpt =
+        cambioService.buscarSeNecessario(moedaTituloCodigo, moedaPagamentoCodigo);
+    TaxaCambio taxaCambio = taxaCambioOpt.orElse(null);
+    BigDecimal taxaCambioUsada = taxaCambioOpt.map(TaxaCambio::getValor).orElse(null);
+    BigDecimal valorLiquido =
+        taxaCambioOpt
+            .map(tc -> valorPresente.multiply(tc.getValor()))
+            .orElse(valorPresente)
+            .setScale(Precisao.ESCALA_VALOR_MONETARIO, Precisao.ARREDONDAMENTO);
 
     Caixa caixa =
         caixaRepository

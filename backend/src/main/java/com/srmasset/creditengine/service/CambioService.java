@@ -8,6 +8,7 @@ import com.srmasset.creditengine.repository.MoedaRepository;
 import com.srmasset.creditengine.repository.TaxaCambioRepository;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +28,19 @@ public class CambioService {
             moedaOrigemCodigo, moedaDestinoCodigo)
         .orElseThrow(
             () -> new TaxaCambioIndisponivelException(moedaOrigemCodigo, moedaDestinoCodigo));
+  }
+
+  /**
+   * Mesma moeda de origem e destino => sem conversão (vazio). Moedas diferentes => busca a taxa
+   * vigente (lança se não houver). Centraliza a regra "converte só se as moedas diferirem",
+   * reaproveitada por LiquidacaoService e SimulacaoService.
+   */
+  public Optional<TaxaCambio> buscarSeNecessario(
+      String moedaOrigemCodigo, String moedaDestinoCodigo) {
+    if (moedaOrigemCodigo.equals(moedaDestinoCodigo)) {
+      return Optional.empty();
+    }
+    return Optional.of(buscarTaxaVigente(moedaOrigemCodigo, moedaDestinoCodigo));
   }
 
   @Transactional
