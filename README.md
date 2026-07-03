@@ -30,7 +30,8 @@ Monorepo:
 - [x] Entendimento do problema e decisões de domínio (ver `ROADMAP.md`)
 - [x] Projeto Gradle do backend criado (Spring Boot, PostgreSQL, Flyway, Actuator/Prometheus, OpenAPI, JUnit/Testcontainers)
 - [x] Projeto do frontend criado (React + TypeScript + Vite)
-- [ ] Modelo de dados (Diagrama ER + DDL) e migrations Flyway
+- [x] Git hooks (Husky): pre-commit (lint/format), commit-msg (Conventional Commits), pre-push (testes)
+- [x] Modelo de dados (Diagrama ER + DDL) e migrations Flyway — ver [`docs/diagrama-er.md`](./docs/diagrama-er.md)
 - [ ] Camadas de aplicação / negócio / persistência e motor de precificação (Strategy Pattern)
 - [ ] `docker-compose` (API + PostgreSQL + Prometheus + Grafana)
 - [ ] Painel do Operador e Grid de Transações (telas reais)
@@ -76,5 +77,6 @@ Ainda é o scaffold padrão do Vite — as telas do Painel do Operador e do Grid
 ## Documentação
 
 - [`ROADMAP.md`](./ROADMAP.md) — entendimento do problema, decisões de domínio e progresso técnico, passo a passo.
+- [`docs/diagrama-er.md`](./docs/diagrama-er.md) — diagrama ER, decisões de tipo/precisão numérica e gaps conhecidos do modelo de dados.
 - [`AI_USAGE.md`](./AI_USAGE.md) — uso de IA no desenvolvimento (prompts, correções, análise crítica).
 - [`CLAUDE.md`](./CLAUDE.md) — enunciado completo do desafio técnico.

@@ -70,7 +70,7 @@ Com a carteira internacionalizada, o fundo hoje mantém caixa em mais de uma moe
 
 **Perguntas em aberto:** nenhuma pendente no momento — entendimento do problema fechado. Próximo passo é transformar essas decisões em especificação.
 
-### Passo 2 — Especificação: Stack, Estrutura e Git Workflow _(em andamento)_
+### Passo 2 — Especificação: Stack, Estrutura e Git Workflow _(concluído)_
 
 **Stack definida**
 
@@ -104,4 +104,15 @@ Acumulando os requisitos de Júnior + Pleno + Sênior do desafio:
 - **Semantic Versioning via Tags:** tag `v1.0.0` marcando a entrega final; tags intermediárias opcionais em marcos relevantes.
 - **Interactive Rebase:** usado antes de abrir/finalizar um PR pra organizar a sequência de commits (squash de fixups, reordenação lógica) mantendo linearidade profissional.
 
-**Próximo:** detalhar a estrutura interna do `/backend` (camadas: aplicação, negócio, persistência) e do `/frontend`, e então partir pro modelo de dados (Diagrama ER + DDL) e contratos de API.
+### Passo 3 — Modelo de Dados (Diagrama ER + DDL/Flyway) _(concluído)_
+
+9 tabelas implementadas em 11 migrations Flyway (`backend/src/main/resources/db/migration/V1` a `V11`), validadas de ponta a ponta num Postgres real via Docker (todas as migrations aplicam limpo, e as constraints de integridade foram testadas na prática com `INSERT`s manuais). Diagrama ER completo, justificativa das decisões de tipo/precisão e gaps documentados em [`docs/diagrama-er.md`](./docs/diagrama-er.md).
+
+Três decisões de escopo fechadas nesta etapa:
+- **Spread fica só no código** (Strategy Pattern) — `tipo_recebivel` é catálogo puro (`codigo`, `nome`, `ativo`), sem coluna de spread. Evita duas fontes de verdade sobre a mesma regra de risco.
+- **`lote_importacao` é persistido** — rastreia de qual submissão cada recebível veio, reforçando auditabilidade, mesmo a liquidação continuando por recebível (não por lote).
+- **Sem ponteiro redundante** `recebivel.ultima_liquidacao_id` — a liquidação ativa de um recebível é derivada por query sob demanda (YAGNI); otimiza-se só se o profiling pedir.
+
+Gaps documentados como escopo futuro (não implementados agora, ver `docs/diagrama-er.md` para detalhes): tabela `movimento_caixa` separada (ledger de efeito-no-caixa desacoplado do ledger de precificação), coluna de autoria (`criado_por` — não há sistema de usuário/auth ainda), mecanismo de aporte/capitalização de caixa, e particionamento de `liquidacao` por período (prematuro para o volume atual).
+
+**Próximo:** camada de aplicação — entidades JPA, repositórios, motor de precificação (Strategy Pattern) e contratos de API (endpoints REST + OpenAPI).
