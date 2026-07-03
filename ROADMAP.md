@@ -121,4 +121,15 @@ Gaps documentados como escopo futuro (não implementados agora, ver `docs/diagra
 
 Validado de ponta a ponta, incluindo um ciclo completo `docker compose down -v` + `up -d` do zero (sem cache/estado anterior) pra garantir reprodutibilidade: as 11 migrations aplicam automaticamente no boot da API, `/actuator/health` responde `UP`, o Prometheus reporta o target `srm-credit-engine` como `up`, e o Grafana já enxerga o datasource do Prometheus sem configuração manual.
 
-**Próximo:** camada de aplicação — entidades JPA, repositórios, motor de precificação (Strategy Pattern) e contratos de API (endpoints REST + OpenAPI).
+### Passo 5 — Camada de Aplicação (Controller / Service / Repository) _(concluído)_
+
+Backend funcional de ponta a ponta: `domain` (9 entidades JPA + 2 enums, mapeadas 1:1 com o schema), `repository` (Spring Data JPA puro, sem SQL nativo), `pricing` (Strategy Pattern — `PricingStrategy` expõe só o spread, `MotorPrecificacao` compartilha a fórmula, usando `ch.obermuhlner:big-math` pra potência fracionária em `BigDecimal` sem nunca cair pra `double`), `service` (`LiquidacaoService` com transação por item + Optimistic Locking real via flush explícito, `LiquidacaoBatchService` orquestrando o lote através do proxy do Spring), `exception` (hierarquia de domínio + `GlobalExceptionHandler`), `controller` + `dto` (endpoints REST, 3 camadas), e `report` (Extrato de Liquidação, 2 camadas, SQL nativo via `JdbcTemplate`).
+
+**Validado de ponta a ponta**, não só "deveria funcionar":
+- 15 testes unitários do motor de precificação (incluindo casos de expoente fracionário com resultado exato verificável na mão, e cross-check contra `BigDecimal.pow(int)` nativo para expoentes inteiros).
+- Rebuild completo do `docker-compose` do zero (`down -v` + `up -d --build`) com o schema real — `ddl-auto: validate` pegou 2 mismatches reais entre entidade e migration (tipo de coluna) antes de chegarem a produção.
+- Fluxo feliz completo via API real: cadastro de cedente, taxas de câmbio/mercado, submissão de lote (mesma moeda e cross-currency), extrato paginado/filtrado, estorno com proteção contra duplo-estorno.
+- **Concorrência real**: duas requisições `POST /api/recebiveis/lote` disparadas simultaneamente contra o mesmo caixa — uma sucede, a outra recebe `CONFLITO_CONCORRENCIA`, e o saldo final reflete exatamente 1 débito (validado via saldo antes/depois batendo com o valor da liquidação bem-sucedida). Teste de integração equivalente com Testcontainers foi escrito (`LiquidacaoConcorrenciaIT`), mas não roda neste ambiente de desenvolvimento específico por incompatibilidade entre o Docker Engine local (muito recente) e o probe de conexão do Testcontainers — validação manual supriu a lacuna.
+- Bugs reais encontrados e corrigidos durante a verificação: `documento` duplicado de cedente vazava como 500 genérico (virou 409 `CEDENTE_DUPLICADO`), e `criado_em` voltava `null` nas respostas (Hibernate não relia colunas `insertable=false` após o INSERT — corrigido com `@Generated(event = INSERT)`).
+
+**Próximo:** telas do frontend (Painel do Operador, Grid de Transações) consumindo essa API.

@@ -35,7 +35,7 @@ docker-compose.yml → orquestra API + PostgreSQL + Prometheus + Grafana
 - [x] Git hooks (Husky): pre-commit (lint/format), commit-msg (Conventional Commits), pre-push (testes)
 - [x] Modelo de dados (Diagrama ER + DDL) e migrations Flyway — ver [`docs/diagrama-er.md`](./docs/diagrama-er.md)
 - [x] `docker-compose` (API + PostgreSQL + Prometheus + Grafana) — validado de ponta a ponta
-- [ ] Camadas de aplicação / negócio / persistência e motor de precificação (Strategy Pattern)
+- [x] Camadas de aplicação / negócio / persistência e motor de precificação (Strategy Pattern) — API funcional de ponta a ponta, ver `ROADMAP.md`
 - [ ] Painel do Operador e Grid de Transações (telas reais)
 - [ ] CI/CD
 
@@ -77,6 +77,21 @@ export DB_PASSWORD=srm
 ./gradlew build     # compila e roda os testes
 ./gradlew bootRun   # sobe a aplicação em http://localhost:8080, aplicando as migrations automaticamente
 ```
+
+> `./gradlew test` inclui um teste de integração de concorrência (`LiquidacaoConcorrenciaIT`) que sobe um Postgres descartável via Testcontainers — requer Docker com API ≥ 1.40. Em ambientes com Docker Engine muito recente, o probe de compatibilidade do Testcontainers 1.21.x pode falhar na inicialização (não é um bug do teste); o mesmo cenário pode ser validado manualmente disparando dois `POST /api/recebiveis/lote` concorrentes contra a mesma moeda.
+
+## Principais endpoints
+
+| Método | Rota | O quê |
+|---|---|---|
+| `POST` | `/api/cedentes` | Cadastra cedente |
+| `POST` | `/api/recebiveis/lote` | Recebe um lote, cria e liquida cada recebível numa transação própria — resposta sempre `200` com resultado por item |
+| `POST` | `/api/liquidacoes/{id}/estorno` | Estorna uma liquidação (nunca edita a original) |
+| `GET`/`POST` | `/api/taxas-cambio` | Consulta/registra taxa de câmbio vigente |
+| `GET`/`POST` | `/api/taxas-mercado` | Consulta/registra taxa de mercado (CDI/SOFR) vigente |
+| `GET` | `/api/relatorios/extrato-liquidacao` | Extrato paginado/filtrado (cedente, moeda, período) — 2 camadas, SQL nativo |
+
+Contratos completos no Swagger UI.
 
 ## Como rodar (frontend)
 
