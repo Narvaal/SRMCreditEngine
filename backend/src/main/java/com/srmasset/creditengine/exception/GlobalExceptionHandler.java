@@ -21,7 +21,11 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-  @ExceptionHandler(RecebivelNaoEncontradoException.class)
+  @ExceptionHandler({
+    RecebivelNaoEncontradoException.class,
+    CedenteNaoEncontradoException.class,
+    MoedaNaoEncontradaException.class
+  })
   public ResponseEntity<ErroResponse> handleNaoEncontrado(
       NegocioException ex, HttpServletRequest req) {
     return build(HttpStatus.NOT_FOUND, ex, req);
