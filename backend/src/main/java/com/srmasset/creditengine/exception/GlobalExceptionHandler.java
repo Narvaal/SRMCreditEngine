@@ -61,6 +61,13 @@ public class GlobalExceptionHandler {
     return build(HttpStatus.BAD_REQUEST, ex, req);
   }
 
+  @ExceptionHandler(ProviderIndisponivelException.class)
+  public ResponseEntity<ErroResponse> handleProviderIndisponivel(
+      NegocioException ex, HttpServletRequest req) {
+    log.warn("[{}] {}", ex.getCodigo(), ex.getMessage());
+    return build(HttpStatus.SERVICE_UNAVAILABLE, ex, req);
+  }
+
   @ExceptionHandler(PricingStrategyNaoEncontradaException.class)
   public ResponseEntity<ErroResponse> handleConfiguracaoInconsistente(
       PricingStrategyNaoEncontradaException ex, HttpServletRequest req) {

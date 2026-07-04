@@ -17,11 +17,11 @@ flowchart TB
 
     srm["<b>🏦 SRM Credit Engine</b><br/><i>[Sistema]</i><br/>Precifica (Strategy Pattern) e liquida lotes de<br/>recebíveis multimoeda de forma transacional<br/>e auditável (ledger append-only)"]
 
-    fonteTaxas["<b>☁️ Fonte de Câmbio/Mercado</b><br/><i>[Sistema Externo]</i><br/>BACEN/B3/FX provider no mundo real.<br/>Hoje MOCKADA: taxas entram via POST<br/>manual, sem integração automática"]
+    fonteTaxas["<b>☁️ Fonte de Câmbio/Mercado</b><br/><i>[Sistema Externo]</i><br/>BACEN/B3/FX provider no mundo real.<br/>Hoje SIMULADA por um mock interno<br/>(/mock/fx-provider) com HTTP de verdade"]
 
     operador -->|"Cadastra, liquida, consulta extrato<br/><i>[HTTPS]</i>"| srm
     sre -->|"Observa métricas, dashboards e logs<br/><i>[HTTP]</i>"| srm
-    srm -->|"Registra taxa vigente<br/><i>[POST manual, mockado]</i>"| fonteTaxas
+    srm -->|"Busca cotações (câmbio, CDI/SOFR)<br/><i>[HTTP com retry + circuit breaker]</i>"| fonteTaxas
 
     classDef person fill:#08427B,stroke:#073B6F,color:#fff,rx:6,ry:6
     classDef system fill:#1168BD,stroke:#3C7FC0,color:#fff,rx:6,ry:6
@@ -41,7 +41,7 @@ Zoom pra dentro do `SRM Credit Engine`: as peças deployáveis e como conversam 
 flowchart TB
     operador["<b>👤 Operador de Mesa</b>"]
     sre["<b>👤 Time de Observabilidade</b>"]
-    fonteTaxas["<b>☁️ Fonte de Câmbio/Mercado</b><br/><i>[Sistema Externo]</i><br/>Mockada — POST manual<br/>via Swagger/API"]
+    fonteTaxas["<b>☁️ Fonte de Câmbio/Mercado</b><br/><i>[Sistema Externo]</i><br/>Simulada por mock interno<br/>(/mock/fx-provider), HTTP real"]
 
     subgraph srm["SRM Credit Engine"]
         direction TB
@@ -58,7 +58,7 @@ flowchart TB
     prometheus -->|"Scrape de métricas<br/><i>[HTTP]</i>"| backend
     grafana -->|"Consulta métricas<br/><i>[PromQL]</i>"| prometheus
     sre -->|"Visualiza dashboards<br/><i>[HTTPS]</i>"| grafana
-    backend -.->|"Registra taxa vigente<br/><i>[POST manual]</i>"| fonteTaxas
+    backend -.->|"Busca cotações<br/><i>[HTTP, retry + circuit breaker]</i>"| fonteTaxas
 
     classDef person fill:#08427B,stroke:#073B6F,color:#fff,rx:6,ry:6
     classDef container fill:#1168BD,stroke:#3C7FC0,color:#fff,rx:6,ry:6

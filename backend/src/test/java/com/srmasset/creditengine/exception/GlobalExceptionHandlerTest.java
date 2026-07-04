@@ -91,6 +91,16 @@ class GlobalExceptionHandlerTest {
   }
 
   @Test
+  void providerIndisponivel_retorna503ComCodigoDeDominio() {
+    ResponseEntity<ErroResponse> resposta =
+        handler.handleProviderIndisponivel(
+            new ProviderIndisponivelException("circuito aberto"), request);
+
+    assertThat(resposta.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+    assertThat(resposta.getBody().codigo()).isEqualTo("PROVIDER_INDISPONIVEL");
+  }
+
+  @Test
   void validacaoInvalida_retorna400ComListaDeCamposInvalidos() {
     BindingResult bindingResult = mock(BindingResult.class);
     when(bindingResult.getFieldErrors())

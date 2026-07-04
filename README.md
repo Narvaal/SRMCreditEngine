@@ -48,6 +48,7 @@ docker-compose.yml → orquestra Frontend + API + PostgreSQL + Prometheus + Graf
 - [x] Diagrama C4 (Nível 1 e 2) e critérios de aceite documentados (usabilidade, segurança, desempenho, escalabilidade) — ver [`docs/diagrama-c4.md`](./docs/diagrama-c4.md) e [`docs/criterios-aceite.md`](./docs/criterios-aceite.md)
 - [x] Primeiro release: PR `dev → main` + tag semântica [`v1.0.0`](https://github.com/Narvaal/SRMCreditEngine/releases/tag/v1.0.0)
 - [x] Simulação de gestão de crise: hotfix (`backend/Dockerfile` não-root) `git cherry-pick` de `main` pra `prod`, tag [`v1.0.1`](https://github.com/Narvaal/SRMCreditEngine/releases/tag/v1.0.1) — ver "Estratégia de branching" abaixo e `ROADMAP.md`
+- [x] Resiliência: retry + circuit breaker (Resilience4j) na integração com o provider externo de taxas (mockado), com degradação graciosa — ver seção "Resiliência" abaixo e `ROADMAP.md`
 
 ## Como rodar (stack completa: API + banco + observabilidade)
 
@@ -105,8 +106,23 @@ export DB_PASSWORD=srm
 | `GET` | `/api/relatorios/extrato-liquidacao` | Extrato paginado/filtrado (cedente, moeda, período) — 2 camadas, SQL nativo |
 | `POST` | `/api/recebiveis/simular` | Read-only: calcula o valor líquido sem persistir nada (usado pelo Painel do Operador) |
 | `GET` | `/api/moedas`, `/api/tipos-recebivel` | Catálogos (BRL/USD, Duplicata Mercantil/Cheque Pré-datado) |
+| `POST` | `/api/taxas/sincronizar` | Busca cotações no provider externo (mockado) via client com retry + circuit breaker e persiste — `503 PROVIDER_INDISPONIVEL` se o provider estiver fora |
+| `GET`/`PUT` | `/mock/fx-provider/*` | Provider externo **simulado** (fora do `/api`): cotações, knob de falha (`/config?failureRate=`) e contador de chamadas (`/stats`) |
 
 Contratos completos no Swagger UI.
+
+## Resiliência (retry + circuit breaker)
+
+A sincronização de taxas passa por um client HTTP protegido por **Resilience4j** (retry com backoff exponencial + circuit breaker, instância `fxProvider` no `application.yml`). Provider fora do ar degrada só a *atualização* de taxas — liquidação e simulação continuam com a última taxa vigente persistida (histórico append-only). Pra ver o circuito abrindo ao vivo:
+
+```bash
+curl -X PUT "http://localhost:8080/mock/fx-provider/config?failureRate=1.0"   # derruba o provider
+curl -X POST http://localhost:8080/api/taxas/sincronizar                      # 503 após 3 retries; repetir abre o circuito
+curl -s http://localhost:8080/actuator/prometheus | grep circuitbreaker_state # open = 1.0
+curl -X PUT "http://localhost:8080/mock/fx-provider/config?failureRate=0.0"   # provider volta; circuito fecha após o wait (10s) + 2 syncs bons
+```
+
+No `docker-compose`, um sync agendado (`FX_PROVIDER_SYNC_ENABLED=true`, a cada 60s) mantém o circuito ciclando e visível no Prometheus/Grafana sem intervenção manual.
 
 ## Como rodar (frontend isolado, modo dev — hot reload)
 
