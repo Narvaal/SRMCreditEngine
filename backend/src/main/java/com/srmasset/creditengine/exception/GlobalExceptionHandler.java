@@ -3,8 +3,8 @@ package com.srmasset.creditengine.exception;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;
 import java.util.List;
-import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -38,6 +38,7 @@ public class GlobalExceptionHandler {
     CedenteDuplicadoException.class
   })
   public ResponseEntity<ErroResponse> handleConflito(NegocioException ex, HttpServletRequest req) {
+    log.warn("[{}] {}", ex.getCodigo(), ex.getMessage());
     return build(HttpStatus.CONFLICT, ex, req);
   }
 
@@ -48,6 +49,7 @@ public class GlobalExceptionHandler {
   })
   public ResponseEntity<ErroResponse> handleRegraNegocio(
       NegocioException ex, HttpServletRequest req) {
+    log.warn("[{}] {}", ex.getCodigo(), ex.getMessage());
     return build(HttpStatus.UNPROCESSABLE_ENTITY, ex, req);
   }
 
@@ -84,14 +86,16 @@ public class GlobalExceptionHandler {
 
   @ExceptionHandler(Exception.class)
   public ResponseEntity<ErroResponse> handleInesperado(Exception ex, HttpServletRequest req) {
-    String traceId = UUID.randomUUID().toString();
-    log.error("Erro inesperado [traceId={}]", traceId, ex);
+    // requestId vem do CorrelationIdFilter (MDC) — a mesma correlação de todas as outras linhas
+    // de log desta requisição, em vez de um id solto gerado só aqui.
+    String requestId = MDC.get("requestId");
+    log.error("Erro inesperado [requestId={}]", requestId, ex);
     ErroResponse body =
         new ErroResponse(
             Instant.now(),
             HttpStatus.INTERNAL_SERVER_ERROR.value(),
             "ERRO_INESPERADO",
-            "Erro inesperado. traceId=" + traceId,
+            "Erro inesperado. requestId=" + requestId,
             req.getRequestURI(),
             List.of());
     return ResponseEntity.internalServerError().body(body);

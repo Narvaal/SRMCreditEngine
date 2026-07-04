@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
+import org.slf4j.MDC;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -108,13 +109,18 @@ class GlobalExceptionHandlerTest {
   }
 
   @Test
-  void erroInesperado_retorna500ComTraceIdNaMensagem() {
-    ResponseEntity<ErroResponse> resposta =
-        handler.handleInesperado(new RuntimeException("boom"), request);
+  void erroInesperado_retorna500ComRequestIdDoMdcNaMensagem() {
+    MDC.put("requestId", "req-123");
+    try {
+      ResponseEntity<ErroResponse> resposta =
+          handler.handleInesperado(new RuntimeException("boom"), request);
 
-    assertThat(resposta.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
-    assertThat(resposta.getBody().codigo()).isEqualTo("ERRO_INESPERADO");
-    assertThat(resposta.getBody().mensagem()).contains("traceId=");
-    assertThat(resposta.getBody().camposInvalidos()).isEmpty();
+      assertThat(resposta.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+      assertThat(resposta.getBody().codigo()).isEqualTo("ERRO_INESPERADO");
+      assertThat(resposta.getBody().mensagem()).contains("requestId=req-123");
+      assertThat(resposta.getBody().camposInvalidos()).isEmpty();
+    } finally {
+      MDC.remove("requestId");
+    }
   }
 }
