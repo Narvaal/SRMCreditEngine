@@ -28,6 +28,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.transaction.annotation.Transactional;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -37,12 +38,18 @@ import org.testcontainers.junit.jupiter.Testcontainers;
  * via Testcontainers, não mockado: o que importa aqui é a montagem dinâmica do WHERE (só inclui os
  * predicados informados) e o plano de query real, não a lógica de negócio.
  *
+ * <p>{@code @Transactional}: o container Postgres é único pra classe inteira (não recriado por
+ * método), então cada teste precisa do próprio rollback — sem isso, o segundo método a rodar
+ * bateria na UNIQUE constraint do {@code documento} do cedente semeado no primeiro, e os totais de
+ * {@code totalElements} acumulariam entre testes.
+ *
  * <p>Mesma limitação de ambiente que {@link
  * com.srmasset.creditengine.service.LiquidacaoConcorrenciaIT}: requer Docker Engine com {@code
  * MinAPIVersion <= 1.32}; roda normalmente no CI do GitHub.
  */
 @SpringBootTest
 @Testcontainers
+@Transactional
 class ExtratoLiquidacaoRepositoryIT {
 
   @Container static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:17");
