@@ -1,0 +1,16 @@
+{
+  "name": "srm-credit-engine",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Git hooks e ferramentas de automação do monorepo (backend + frontend). Não é o app em si — ver /backend e /frontend.",
+  "scripts": {
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "21.2.0",
+    "@commitlint/config-conventional": "21.2.0",
+    "husky": "9.1.7",
+    "lint-staged": "17.0.8"
+  }
+}

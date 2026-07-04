@@ -1,0 +1,73 @@
+# Critérios de Aceite — SRM Credit Engine
+
+Formaliza os critérios de aceite do desafio (`CLAUDE.md`, seção 5: usabilidade, segurança, desempenho e escalabilidade), discutidos informalmente ao longo do desenvolvimento mas nunca antes reunidos num documento único.
+
+Cada critério é uma afirmação verificável — **Atendido**, com a evidência (arquivo/teste/decisão) que sustenta a afirmação, ou **Gap conhecido**, com a razão de não estar implementado e o custo/risco de deixar assim. O objetivo não é declarar o sistema "pronto para produção" — é ser honesto sobre o que foi construído e o que ficou de fora conscientemente, dado o escopo de um desafio técnico de 3–4 dias úteis.
+
+Reflete o estado do sistema em 2026-07-04 (ver `ROADMAP.md` para o histórico de decisões).
+
+---
+
+## Usabilidade
+
+| # | Critério | Status | Evidência |
+|---|---|---|---|
+| U1 | O operador vê o valor líquido calculado **antes** de submeter o lote, sem duplicar a fórmula de precificação no frontend | ✅ Atendido | Endpoint dedicado `POST /api/recebiveis/simular` (read-only, sem persistência) reaproveita os mesmos beans de precificação do fluxo real; `usePainelOperadorForm` chama esse endpoint com debounce de 450ms conforme o formulário é preenchido |
+| U2 | Erros de validação aparecem inline, no campo específico, com mensagem em português — não um erro genérico | ✅ Atendido | `recebivelFormSchema` (Zod) + `react-hook-form`; `RecebivelForm.test.tsx` cobre as mensagens (`"Selecione um cedente"`, `"O valor deve ser maior que zero"`, etc.) |
+| U3 | Um erro de negócio na submissão (ex.: saldo insuficiente) é comunicado de forma clara, sem travar a tela nem exigir reload | ✅ Atendido | `PainelOperadorPage` renderiza `<Alert tipo="error">{mensagemErro}</Alert>` a partir do item de resultado do lote; coberto por `PainelOperadorPage.test.tsx` |
+| U4 | Filtros e paginação do extrato são compartilháveis e sobrevivem a refresh (não se perdem ao voltar/recarregar) | ✅ Atendido | `useExtratoFiltrosUrlState` mantém filtros/página na URL (query string), não em `useState` — coberto por `useExtratoFiltrosUrlState.test.tsx` |
+| U5 | A API é autoexplicável — um consumidor novo consegue descobrir contratos sem ler código-fonte | ✅ Atendido | OpenAPI/Swagger em `/swagger-ui/index.html` (springdoc), gerado a partir das anotações dos controllers/DTOs |
+| U6 | Toda resposta de erro da API segue um envelope único e previsível (campo de código de erro estável, não só a mensagem em texto livre) | ✅ Atendido | `ErroResponse` (`timestamp`, `status`, `codigo`, `mensagem`, `path`, `camposInvalidos`) — usado por todos os `@ExceptionHandler` de `GlobalExceptionHandler`; o frontend depende do `codigo` (não da `mensagem`) pra lógica, e usa a `mensagem` só para exibição |
+| U7 | Uma operação em lote com itens mistos (sucesso + falha) informa o resultado de cada item, não um status único para a requisição toda | ✅ Atendido | `LoteLiquidacaoResponse` sempre `200`, com `itens[]` individual — decisão de domínio registrada no `ROADMAP.md` (Passo 1) |
+| U8 | Não há botão de estorno na Grid de Transações — a operação existe só via API/Swagger | ⚠️ Gap conhecido | `POST /api/liquidacoes/{id}/estorno` funcional e testado, mas sem UI dedicada. Registrado em `ROADMAP.md` como nice-to-have; baixo risco (a ação já é seguramente idempotente contra duplo estorno no backend) |
+| U9 | Cadastro de cedente é feito só via API — o Painel do Operador não permite criar um cedente novo inline | ⚠️ Gap conhecido | Mesmo status do item anterior — registrado em `ROADMAP.md`, fricção de UX aceitável para o escopo do desafio |
+
+## Segurança
+
+| # | Critério | Status | Evidência |
+|---|---|---|---|
+| S1 | Toda entrada de usuário é validada no limite da API antes de qualquer regra de negócio rodar | ✅ Atendido | Bean Validation (`@NotNull`, `@NotBlank`, `@Positive`, `@Future`) em todos os DTOs de request; `MethodArgumentNotValidException` mapeada centralmente pra `400` com a lista de campos inválidos |
+| S2 | Nenhuma query é montada por concatenação de string com input do usuário (proteção contra SQL Injection) | ✅ Atendido | Spring Data JPA (queries derivadas/JPQL parametrizadas) em todo o código de negócio; `ExtratoLiquidacaoRepository` usa SQL nativo mas com `NamedParameterJdbcTemplate` e bind parameters — o `WHERE` é montado dinamicamente só na *presença* dos predicados, nunca com o *valor* interpolado na string |
+| S3 | Um erro inesperado nunca vaza detalhe de implementação (stack trace, nome de classe interna, SQL) pro cliente da API | ✅ Atendido | `GlobalExceptionHandler.handleInesperado` devolve `ERRO_INESPERADO` + `requestId` (correlacionável com o log estruturado do servidor); o stack trace completo só vai pro log ECS (`log.error`), nunca pro corpo da resposta HTTP |
+| S4 | Um parâmetro obrigatório ausente ou malformado devolve `400`, não `500` (não trata erro de input do cliente como falha de infraestrutura) | ✅ Atendido | `GlobalExceptionHandler.handleParametroInvalido` — corrigido depois de um bug real encontrado escrevendo os testes de controller (ver `AI_USAGE.md`); coberto em cada `@WebMvcTest` de endpoint `GET` com parâmetro obrigatório |
+| S5 | Toda transação financeira é atômica — não existe estado "pela metade" observável | ✅ Atendido | `LiquidacaoService.liquidar`/`estornar` são `@Transactional`; concorrência real sobre o mesmo caixa protegida por Optimistic Locking (`LiquidacaoConcorrenciaIT`, validado também no CI real) |
+| S6 | Não existe autenticação nem autorização — qualquer requisição de rede alcança qualquer endpoint | ❌ Gap conhecido (por escopo) | Nenhuma dependência de Spring Security no `build.gradle.kts`. **Aceitável** para um desafio técnico/demo interna; **inaceitável** antes de expor o sistema além de uma rede confiável. Próximo passo natural seria OAuth2/JWT + escopos por papel (mesa de operações vs. auditoria), fora do escopo definido para este desafio |
+| S7 | Comunicação é criptografada em trânsito (TLS) | ❌ Gap conhecido (por escopo) | `docker-compose` sobe tudo em HTTP puro, sem terminação TLS — apropriado para ambiente local/desafio; produção exigiria TLS na borda (ingress/load balancer) antes do tráfego chegar ao Nginx |
+| S8 | Segredos (senha de banco, etc.) não ficam em texto plano versionado | ⚠️ Gap conhecido (mitigado) | `docker-compose.yml` usa `${DB_PASSWORD:-srm}` — um default de conveniência para rodar local, não credencial real. Não há `.env` com segredo real commitado (verificado no `.gitignore`). Produção exigiria um cofre de segredos (Vault, AWS Secrets Manager, K8s Secrets) |
+| S9 | As imagens Docker do sistema não rodam como root | ❌ Gap conhecido | Nem `backend/Dockerfile` nem `frontend/Dockerfile` declaram `USER` — ambas rodam como root por padrão da imagem base. Hardening barato de aplicar (`USER 1000` + ajuste de permissões), não feito ainda |
+| S10 | Dependências têm scan automatizado de vulnerabilidades conhecidas | ❌ Gap conhecido | Sem Dependabot/Snyk/OWASP Dependency-Check configurado no CI. Barato de adicionar (Dependabot é nativo do GitHub), não feito ainda |
+| S11 | CORS não é um vetor de ataque | ✅ Atendido (por design, não por configuração defensiva) | Frontend e backend são servidos same-origin através do proxy reverso do Nginx (`/api/*` → `backend:8080`) tanto em produção (`docker-compose`) quanto em dev (proxy do Vite) — não existe requisição cross-origin de verdade, então não há necessidade de política de CORS nenhuma, correta ou incorreta |
+
+## Desempenho
+
+| # | Critério | Status | Evidência |
+|---|---|---|---|
+| P1 | O Extrato de Liquidação responde de forma performática mesmo com grande volume, sem competir por lock com o caminho transacional | ✅ Atendido | Caminho de 2 camadas dedicado (`ExtratoLiquidacaoController` → `ExtratoLiquidacaoRepository`, SQL nativo via `NamedParameterJdbcTemplate`), nunca passa pela camada de negócio/JPA de escrita. Índices dedicados: `idx_liquidacao_cedente_periodo` (covering index pro filtro mais comum — cedente + período), `idx_liquidacao_moeda_periodo`, `idx_liquidacao_periodo` (`V10__create_liquidacao.sql`) |
+| P2 | Toda leitura paginada tem um teto de linhas por página — não existe endpoint que devolva a tabela inteira | ✅ Atendido | `PaginaResponse` com `page`/`size` obrigatórios (default `size=20`) em `ExtratoLiquidacaoController` |
+| P3 | Cálculo monetário usa precisão exata (nunca `float`/`double`), mesmo sabendo que isso custa mais CPU que ponto flutuante binário | ✅ Atendido (trade-off consciente) | `BigDecimal` em toda a cadeia de precificação, incluindo potência fracionária via `big-math` (`MotorPrecificacao`) — correção > velocidade bruta pra um motor financeiro; volume esperado (lotes de dezenas/centenas de itens) não torna isso um gargalo real |
+| P4 | O frontend não sobrecarrega a API com uma chamada de simulação por tecla digitada | ✅ Atendido | Debounce de 450ms em `usePainelOperadorForm` antes de chamar `/simular`; `cedenteId` deliberadamente fora do conjunto de campos observados (não afeta o preço, não deveria re-disparar simulação) |
+| P5 | Existe teste de carga/performance real medindo throughput ou latência sob volume | ❌ Gap conhecido | Nenhum teste com k6/Gatling/JMeter foi executado. Os índices foram desenhados por raciocínio sobre o padrão de acesso (filtro comum = cedente + período), não validados empiricamente contra um volume realista de linhas |
+| P6 | Consultas de taxa vigente (câmbio/mercado) evitam ida ao banco repetida para o mesmo par/indicador dentro de uma janela curta | ❌ Gap conhecido | `CambioService`/`TaxaMercadoService` batem no banco a cada chamada, sem cache. Para o volume de um desafio técnico isso é irrelevante; num cenário de milhares de liquidações/segundo (nível Especialista) seria o primeiro ponto de cache (ex.: taxa vigente cacheada por alguns segundos, invalidada em `registrar`) |
+| P7 | Chamadas HTTP do frontend têm timeout e não travam a UI indefinidamente em caso de rede lenta | ❌ Gap conhecido | `httpClient.ts` usa `fetch` puro, sem `AbortController`/timeout configurado. React Query aplica `retry`/staleness, mas não corta uma requisição pendurada |
+
+## Escalabilidade
+
+| # | Critério | Status | Evidência |
+|---|---|---|---|
+| E1 | O backend é stateless — múltiplas instâncias podem rodar atrás de um load balancer sem sticky session | ✅ Atendido | Nenhum estado de sessão em memória; toda persistência é no PostgreSQL. Autenticação/JWT (quando existir) reforçaria isso, mas o backend já não depende de estado local hoje |
+| E2 | A granularidade da transação de liquidação é por item, não por lote inteiro — um lote grande não vira uma transação gigante nem trava outros lotes | ✅ Atendido | Decisão de domínio registrada no `ROADMAP.md` (Passo 1); `LiquidacaoBatchService` chama `LiquidacaoService.liquidar` por item, através do proxy do Spring (bean separado), garantindo transação independente por item |
+| E3 | Duas liquidações concorrentes sobre o mesmo caixa não corrompem o saldo nem serializam todas as escritas atrás de um lock pessimista | ✅ Atendido | Optimistic Locking (`@Version` em `Caixa`/`Recebivel`) — permite tentativas concorrentes reais, só uma perde e recebe `CONFLITO_CONCORRENCIA` pra retry, sem lock de tabela. Validado com concorrência real (`LiquidacaoConcorrenciaIT`, rodando no CI) |
+| E4 | O caminho de leitura (relatório) está desacoplado do caminho de escrita, podendo evoluir independentemente (ex.: mover pra uma réplica de leitura) | ✅ Atendido | Separação arquitetural em 2 camadas (relatório) vs. 3 camadas (transacional) já citada em P1/U-; não há acoplamento de código entre os dois caminhos além do schema compartilhado |
+| E5 | O histórico de liquidação é append-only, permitindo estratégias de particionamento por período no futuro sem quebrar a auditoria | ✅ Atendido (preparado, não implementado) | Ledger nunca sofre `UPDATE`/`DELETE` (`docs/diagrama-er.md`); particionamento de `liquidacao` por período já documentado como gap intencional (prematuro pro volume atual) em `docs/diagrama-er.md` |
+| E6 | Um lote muito grande (ex.: 100 mil itens) não bloqueia a thread HTTP nem estoura timeout de requisição | ❌ Gap conhecido | `LiquidacaoBatchService.processarLote` é síncrono, dentro da própria requisição HTTP — um lote grande o suficiente vira um problema real de latência/timeout. Em escala (nível Especialista), isso pede processamento assíncrono (fila + resultado consultável depois, não uma resposta HTTP síncrona) |
+| E7 | Existe validação real de comportamento sob múltiplas instâncias do backend rodando simultaneamente | ❌ Gap conhecido | Só uma instância de backend testada (local e CI). O design (stateless + Optimistic Locking no banco) sustenta múltiplas réplicas na teoria, mas isso nunca foi exercitado na prática |
+| E8 | Existe estratégia de cache distribuído/CDN para os assets estáticos do frontend | ❌ Gap conhecido | Nginx serve os assets direto do container, sem CDN nem cache HTTP configurado explicitamente (`Cache-Control`, ETags default do Nginx apenas). Irrelevante pro volume de um desafio técnico |
+| E9 | Existe IaC (Terraform/Kubernetes) e autoscaling configurado | ❌ Fora de escopo (nível Especialista) | `CLAUDE.md` seção 6 marca IaC e design para 1 milhão de tx/minuto como requisito do nível Especialista/Staff, não Sênior — deliberadamente fora do escopo desta entrega |
+
+---
+
+## Como este documento deve ser usado
+
+- **Não é uma promessa de produção.** É um retrato honesto do que existe hoje, pensado para dar ao avaliador (e ao próprio time, depois) uma lista verificável em vez de afirmações vagas de "o sistema é seguro/performático/escalável".
+- **Os gaps marcados ❌/⚠️ não são desconhecidos** — cada um já estava implícito em alguma decisão registrada no `ROADMAP.md` ou no `docs/diagrama-er.md`; este documento só os torna explícitos e agrupados por dimensão.
+- Deve ser atualizado sempre que um item mudar de status (ex.: quando autenticação for implementada, `S6` vira ✅ com a evidência correspondente).

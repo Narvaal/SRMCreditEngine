@@ -1,0 +1,70 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: srm-postgres
+    environment:
+      POSTGRES_USER: ${DB_USER:-srm}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-srm}
+      POSTGRES_DB: ${DB_NAME:-srm_credit_engine}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-srm} -d ${DB_NAME:-srm_credit_engine}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+    container_name: srm-backend
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-srm_credit_engine}
+      DB_USER: ${DB_USER:-srm}
+      DB_PASSWORD: ${DB_PASSWORD:-srm}
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: srm-frontend
+    ports:
+      - "8081:80"
+    depends_on:
+      - backend
+
+  prometheus:
+    image: prom/prometheus:v3.13.0
+    container_name: srm-prometheus
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    depends_on:
+      - backend
+
+  grafana:
+    image: grafana/grafana:12.2.10
+    container_name: srm-grafana
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - prometheus
+
+volumes:
+  postgres_data:
+  grafana_data:

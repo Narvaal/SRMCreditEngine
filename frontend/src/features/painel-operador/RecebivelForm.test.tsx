@@ -1,0 +1,71 @@
+import { zodResolver } from '@hookform/resolvers/zod'
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { useForm } from 'react-hook-form'
+import { describe, expect, it, vi } from 'vitest'
+import type { Cedente, Moeda, TipoRecebivel } from '../../api/types'
+import { recebivelFormSchema, type RecebivelFormInput, type RecebivelFormOutput } from '../../domain/recebivelFormSchema'
+import { RecebivelForm } from './RecebivelForm'
+
+const cedentes: Cedente[] = [{ id: 'c1', nome: 'Acme Ltda', documento: '123' }]
+const tiposRecebivel: TipoRecebivel[] = [{ codigo: 'DUPLICATA_MERCANTIL', nome: 'Duplicata Mercantil' }]
+const moedas: Moeda[] = [
+  { codigo: 'BRL', nome: 'Real Brasileiro', casasDecimais: 2 },
+  { codigo: 'USD', nome: 'Dólar Americano', casasDecimais: 2 },
+]
+
+function Harness({ isSubmitting = false, onValid = vi.fn() }: { isSubmitting?: boolean; onValid?: () => void }) {
+  const form = useForm<RecebivelFormInput, unknown, RecebivelFormOutput>({
+    resolver: zodResolver(recebivelFormSchema),
+    defaultValues: {
+      cedenteId: '',
+      tipoRecebivelCodigo: '',
+      valorFace: '' as unknown as number,
+      dataVencimento: '',
+      moedaTitulo: 'BRL',
+      moedaPagamento: 'BRL',
+    },
+  })
+
+  return (
+    <RecebivelForm
+      form={form}
+      onSubmit={form.handleSubmit(onValid)}
+      isSubmitting={isSubmitting}
+      cedentes={cedentes}
+      tiposRecebivel={tiposRecebivel}
+      moedas={moedas}
+    />
+  )
+}
+
+describe('RecebivelForm', () => {
+  it('lista as opções recebidas via props (cedentes, tipos, moedas)', () => {
+    render(<Harness />)
+
+    expect(screen.getByRole('option', { name: 'Acme Ltda' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'Duplicata Mercantil' })).toBeInTheDocument()
+    expect(screen.getAllByRole('option', { name: 'BRL' }).length).toBeGreaterThan(0)
+  })
+
+  it('submeter com campos obrigatórios vazios mostra erros de validação e não chama onValid', async () => {
+    const onValid = vi.fn()
+    render(<Harness onValid={onValid} />)
+
+    await userEvent.click(screen.getByRole('button', { name: /liquidar recebível/i }))
+
+    expect(await screen.findByText('Selecione um cedente')).toBeInTheDocument()
+    expect(screen.getByText('Selecione o tipo')).toBeInTheDocument()
+    // valorFace vazio coage pra 0 via z.coerce.number — cai na validação .positive(), não na de tipo.
+    expect(screen.getByText('O valor deve ser maior que zero')).toBeInTheDocument()
+    expect(screen.getByText('Informe o vencimento')).toBeInTheDocument()
+    expect(onValid).not.toHaveBeenCalled()
+  })
+
+  it('isSubmitting desabilita o botão e troca o texto', () => {
+    render(<Harness isSubmitting />)
+
+    const botao = screen.getByRole('button', { name: /enviando/i })
+    expect(botao).toBeDisabled()
+  })
+})
