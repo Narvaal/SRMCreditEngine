@@ -177,6 +177,14 @@ Triggers: `push`/`pull_request` em `dev`/`main`/`prod` + disparo manual.
 
 **Validado de ponta a ponta** via `docker compose up -d --build` + chamadas reais de API: JSON ECS válido desde o boot (`@timestamp`, `log.level`, `service.name`, `ecs.version`), mesmo `requestId` correlacionando todas as linhas de uma mesma requisição (inclusive entre o erro do Hibernate e a tradução em `GlobalExceptionHandler`), `log.warn` disparando corretamente em `GET /api/taxas-mercado` sem taxa cadastrada (422) e em estorno inválido (409), `log.atInfo` de liquidação/lote com os campos de negócio (`recebivelId`, `valorLiquido`, `totalSucesso`) como chaves estruturadas de verdade, não só mensagem de texto.
 
+### Passo 9 — Cobertura de testes completa (backend + frontend) _(concluído)_
+
+Fecha os gaps de teste restantes mapeados no relatório de cobertura (ver seção "Cobertura de testes" abaixo, agora tudo marcado como feito):
+
+- **Backend — `@WebMvcTest` pros 8 controllers** (`CambioController`, `CedenteController`, `LiquidacaoController`, `MoedaController`, `RecebivelController`, `TaxaMercadoController`, `TipoRecebivelController`, `ExtratoLiquidacaoController`): status HTTP, serialização dos DTOs e o mapeamento de exceção via `GlobalExceptionHandler` exercitados de verdade (não só smoke manual). Escrever esses testes achou um **bug real**: um `@RequestParam` obrigatório ausente (ex.: `GET /api/taxas-cambio` sem `moedaOrigem`) devolvia **500** em vez de 400 — o catch-all `@ExceptionHandler(Exception.class)` interceptava `MissingServletRequestParameterException`/`MethodArgumentTypeMismatchException` antes da resolução padrão do Spring MVC. Corrigido com um handler dedicado (`handleParametroInvalido`), coberto por teste em cada controller GET afetado.
+- **Backend — `ExtratoLiquidacaoRepositoryIT`**: Testcontainers (mesmo padrão de `LiquidacaoConcorrenciaIT`, mesma limitação de Docker Engine neste ambiente local — roda no CI). Cobre a montagem dinâmica do WHERE (cedente, moeda, período, combinações, sem filtro nenhum — prova que nenhum parâmetro nulo quebra a query), paginação e ordenação. Validado manualmente contra o `docker-compose` real (mesmo cenário, mesmas asserções) já que o ambiente local não roda Testcontainers.
+- **Frontend — `useExtratoLiquidacaoQuery`, `RecebivelForm`, `FiltrosTransacoes`, `PainelOperadorPage`, `GridTransacoesPage`**: hook restante + os 4 componentes de composição que faltavam. Escrever o teste de `FiltrosTransacoes` achou um **segundo bug real**: os campos de filtro (`Select`/`DateField`) não recebiam `name`/`id`, então o `<label>` nunca ficava associado ao controle via `for` — falha de acessibilidade (screen readers não conseguem ligar o rótulo ao campo) que só apareceu ao tentar `getByLabelText` no teste. Corrigido adicionando `name` a cada campo.
+
 ---
 
 ## Pendências (retomar na próxima sessão)
@@ -191,12 +199,10 @@ Levantamento original feito ao final do dia 2026-07-03, revisando `CLAUDE.md` (e
 - **Interactive Rebase**: ~~usamos Conventional Commits em commits atômicos o tempo todo, mas ainda não demonstramos organizar/squashar commits via `git rebase -i` antes de um merge~~ — **feito**: os 7 commits de teste do backend (ver "Cobertura de testes" abaixo) foram commitados fora de ordem de propósito e reorganizados via `git rebase -i` numa sequência lógica (núcleo transacional → services de domínio → cross-cutting) antes do push.
 - **Resiliência (retry/circuit breaker)**: o sistema hoje não tem nenhuma chamada HTTP externa de verdade pra proteger — taxas de câmbio/mercado são só `POST` manual (mockado). Vale avaliar se simulamos uma integração externa de verdade (ex.: um client mockado tipo "BACEN/FX provider") só pra ter algo real onde aplicar Resilience4j, já que sem uma chamada externa esse requisito fica sem "alvo".
 
-### Cobertura de testes
+### Cobertura de testes _(concluído — ver Passo 9)_
 
-- **Backend — feito**: `LiquidacaoService` (`liquidar`/`estornar`, incluindo saldo insuficiente, recebível já liquidado, conflito de Optimistic Locking, estorno duplicado), `LiquidacaoBatchService` (resultado parcial do lote), `CambioService`, `TaxaMercadoService`, `RecebivelService`, `CedenteService` e `GlobalExceptionHandler` (mapeamento exceção→status HTTP) — todos com teste unitário dedicado agora (68 testes de unidade, mais o `LiquidacaoConcorrenciaIT` de integração).
-- **Backend — ainda em aberto**: `ExtratoLiquidacaoRepository` (SQL nativo montado dinamicamente — melhor coberto com Testcontainers do que mock) e os controllers (`@WebMvcTest` pros status HTTP, hoje só validados via smoke manual/Swagger).
-- **Frontend — feito**: `usePainelOperadorForm` (debounce, `cedenteId` não afeta simulação, reset pós-submissão) e `useExtratoFiltrosUrlState` (defaults, conversão de `dataFim` inclusiva→exclusiva) — os dois hooks orquestradores centrais.
-- **Frontend — ainda em aberto**: componentes de composição (`PainelOperadorPage`, `GridTransacoesPage`, `RecebivelForm`, `FiltrosTransacoes`) e `useExtratoLiquidacaoQuery`.
+- **Backend**: services de negócio (`LiquidacaoService`, `LiquidacaoBatchService`, `CambioService`, `TaxaMercadoService`, `RecebivelService`, `CedenteService`), `GlobalExceptionHandler`, os 8 controllers REST (`@WebMvcTest`) e `ExtratoLiquidacaoRepository` (Testcontainers) — todos com teste dedicado agora. 99 testes de unidade/slice verdes localmente + 2 testes de integração (Testcontainers) que rodam no CI mas não neste ambiente de desenvolvimento local (limitação de Docker Engine já documentada).
+- **Frontend**: os dois hooks orquestradores (`usePainelOperadorForm`, `useExtratoFiltrosUrlState`), `useExtratoLiquidacaoQuery` e os 4 componentes de composição (`RecebivelForm`, `FiltrosTransacoes`, `PainelOperadorPage`, `GridTransacoesPage`) — 53 testes verdes.
 
 ### Nice-to-have / polish
 
@@ -207,4 +213,4 @@ Levantamento original feito ao final do dia 2026-07-03, revisando `CLAUDE.md` (e
 
 ### Recapitulando o que já está pronto
 
-Passos 1–8 concluídos: entendimento do domínio → stack/estrutura/git workflow → modelo de dados (ER+DDL) → `docker-compose` (Postgres+Prometheus+Grafana) → camada de aplicação completa (Strategy Pattern, Optimistic Locking, exceções, relatório 2 camadas) → frontend (Painel do Operador com simulação em tempo real + Grid de Transações) → CI/CD (GitHub Actions, 3 jobs) + frontend containerizado no compose → logs estruturados (ECS) com correlation id por requisição. Aplicação sobe com 1 comando (`docker compose up -d --build`), 5 containers, testada de ponta a ponta manualmente e via CI real no GitHub.
+Passos 1–9 concluídos: entendimento do domínio → stack/estrutura/git workflow → modelo de dados (ER+DDL) → `docker-compose` (Postgres+Prometheus+Grafana) → camada de aplicação completa (Strategy Pattern, Optimistic Locking, exceções, relatório 2 camadas) → frontend (Painel do Operador com simulação em tempo real + Grid de Transações) → CI/CD (GitHub Actions, 3 jobs) + frontend containerizado no compose → logs estruturados (ECS) com correlation id por requisição → cobertura de testes completa (backend + frontend). Aplicação sobe com 1 comando (`docker compose up -d --build`), 5 containers, testada de ponta a ponta manualmente e via CI real no GitHub.
