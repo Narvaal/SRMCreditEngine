@@ -1,6 +1,7 @@
 # SRM Credit Engine
 
 [![CI](https://github.com/Narvaal/SRMCreditEngine/actions/workflows/ci.yml/badge.svg)](https://github.com/Narvaal/SRMCreditEngine/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/Narvaal/SRMCreditEngine)](https://github.com/Narvaal/SRMCreditEngine/releases/tag/v1.0.0)
 
 Plataforma de cessão de crédito multimoedas. Recebe lotes de recebíveis (duplicatas, cheques pré-datados, etc.), calcula o deságio de cada um com base no risco do ativo e na moeda de liquidação, e registra a liquidação de forma auditável.
 
@@ -45,6 +46,7 @@ docker-compose.yml → orquestra Frontend + API + PostgreSQL + Prometheus + Graf
 - [x] Logs estruturados (JSON/ECS) com correlation id (`requestId`) por requisição, correlacionando todas as linhas de log de uma mesma chamada — ver `ROADMAP.md`
 - [x] Cobertura de testes completa: services de negócio, controllers (`@WebMvcTest`), relatório (Testcontainers), exception handler no backend; hooks orquestradores e componentes de composição no frontend — ver `ROADMAP.md`
 - [x] Diagrama C4 (Nível 1 e 2) e critérios de aceite documentados (usabilidade, segurança, desempenho, escalabilidade) — ver [`docs/diagrama-c4.md`](./docs/diagrama-c4.md) e [`docs/criterios-aceite.md`](./docs/criterios-aceite.md)
+- [x] Primeiro release: PR `dev → main` + tag semântica [`v1.0.0`](https://github.com/Narvaal/SRMCreditEngine/releases/tag/v1.0.0)
 
 ## Como rodar (stack completa: API + banco + observabilidade)
 

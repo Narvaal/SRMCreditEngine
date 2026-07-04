@@ -192,6 +192,12 @@ Fecha os dois últimos requisitos de documentação explícitos do desafio (seç
 - **[`docs/diagrama-c4.md`](../docs/diagrama-c4.md)**: Nível 1 (Contexto — operador, time de observabilidade, e a fonte de câmbio/mercado marcada explicitamente como mockada) e Nível 2 (Container — frontend, backend, Postgres, Prometheus, Grafana), em Mermaid (mesma convenção do diagrama ER), mapeando 1:1 com os serviços do `docker-compose.yml`.
 - **[`docs/criterios-aceite.md`](../docs/criterios-aceite.md)**: critérios verificáveis de usabilidade, segurança, desempenho e escalabilidade, cada um com status (✅ atendido / ⚠️ mitigado / ❌ gap) e evidência (arquivo, teste ou decisão de domínio) — não uma lista de intenções. Documenta explicitamente os gaps que já existiam implicitamente (sem autenticação, sem TLS, imagens Docker rodando como root, sem teste de carga) em vez de deixá-los tácitos.
 
+### Passo 11 — Primeiro release: `dev → main` + tag `v1.0.0` _(concluído)_
+
+Primeira promoção de `dev` pra `main` desde o commit inicial (0 divergência além disso — fast-forward limpo, sem conflito possível): [PR #1](https://github.com/Narvaal/SRMCreditEngine/pull/1), 71 commits, CI verde tanto no PR quanto depois do merge direto em `main` (validado com `gh run watch` nos dois casos, não só assumido). Merge commit (não squash) — preserva a granularidade dos commits atômicos de `dev`.
+
+Tag anotada `v1.0.0` criada sobre o commit de merge (`101365c`) e uma [GitHub Release](https://github.com/Narvaal/SRMCreditEngine/releases/tag/v1.0.0) publicada a partir dela, marcando a entrega completa do nível Sênior — critério de Git explícito do desafio (`CLAUDE.md`, seção 6: "Semantic Versioning via Tags").
+
 ---
 
 ## Pendências (retomar na próxima sessão)
@@ -200,7 +206,6 @@ Levantamento original feito ao final do dia 2026-07-03, revisando `CLAUDE.md` (e
 
 ### Requisitos explícitos do desafio ainda em aberto (nível Sênior)
 
-- **Tag semântica de versão** (`v1.0.0`): nenhuma tag criada ainda. Faz sentido marcar quando dermos o primeiro PR `dev → prod` (ver critério já definido no Passo 2 do roadmap: só promover quando tiver um fluxo vertical completo — o que já temos agora).
 - **Interactive Rebase**: ~~usamos Conventional Commits em commits atômicos o tempo todo, mas ainda não demonstramos organizar/squashar commits via `git rebase -i` antes de um merge~~ — **feito**: os 7 commits de teste do backend (ver "Cobertura de testes" abaixo) foram commitados fora de ordem de propósito e reorganizados via `git rebase -i` numa sequência lógica (núcleo transacional → services de domínio → cross-cutting) antes do push.
 - **Resiliência (retry/circuit breaker)**: o sistema hoje não tem nenhuma chamada HTTP externa de verdade pra proteger — taxas de câmbio/mercado são só `POST` manual (mockado). Vale avaliar se simulamos uma integração externa de verdade (ex.: um client mockado tipo "BACEN/FX provider") só pra ter algo real onde aplicar Resilience4j, já que sem uma chamada externa esse requisito fica sem "alvo".
 
@@ -218,4 +223,4 @@ Levantamento original feito ao final do dia 2026-07-03, revisando `CLAUDE.md` (e
 
 ### Recapitulando o que já está pronto
 
-Passos 1–10 concluídos: entendimento do domínio → stack/estrutura/git workflow → modelo de dados (ER+DDL) → `docker-compose` (Postgres+Prometheus+Grafana) → camada de aplicação completa (Strategy Pattern, Optimistic Locking, exceções, relatório 2 camadas) → frontend (Painel do Operador com simulação em tempo real + Grid de Transações) → CI/CD (GitHub Actions, 3 jobs) + frontend containerizado no compose → logs estruturados (ECS) com correlation id por requisição → cobertura de testes completa (backend + frontend) → diagrama C4 e critérios de aceite documentados. Aplicação sobe com 1 comando (`docker compose up -d --build`), 5 containers, testada de ponta a ponta manualmente e via CI real no GitHub.
+Passos 1–11 concluídos: entendimento do domínio → stack/estrutura/git workflow → modelo de dados (ER+DDL) → `docker-compose` (Postgres+Prometheus+Grafana) → camada de aplicação completa (Strategy Pattern, Optimistic Locking, exceções, relatório 2 camadas) → frontend (Painel do Operador com simulação em tempo real + Grid de Transações) → CI/CD (GitHub Actions, 3 jobs) + frontend containerizado no compose → logs estruturados (ECS) com correlation id por requisição → cobertura de testes completa (backend + frontend) → diagrama C4 e critérios de aceite documentados → primeiro release (`dev → main`, tag `v1.0.0`). Aplicação sobe com 1 comando (`docker compose up -d --build`), 5 containers, testada de ponta a ponta manualmente e via CI real no GitHub.
