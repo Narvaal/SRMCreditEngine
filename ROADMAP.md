@@ -150,3 +150,18 @@ Backend funcional de ponta a ponta: `domain` (9 entidades JPA + 2 enums, mapeada
 **Validado com Playwright** (headless, já que o ambiente não tem display): simulação atualizando em tempo real ao preencher o formulário, submissão do lote com sucesso, navegação pro Grid, zero erros de console. Um bug real foi pego pelo próprio screenshot, não pelo código: a coluna de "deságio %" comparava `valorFace`/`valorLiquido` em moedas diferentes numa linha cross-currency (BRL→USD), produzindo um percentual sem sentido (82%) — corrigido pra só calcular quando `moedaTitulo === moedaPagamento`, com teste cobrindo o caso.
 
 **Próximo:** CI/CD (pipeline com testes + lint), e opcionalmente adicionar o frontend ao `docker-compose`.
+
+### Passo 7 — CI/CD (GitHub Actions) + Frontend no `docker-compose` _(concluído)_
+
+**Frontend containerizado**: `frontend/Dockerfile` multi-stage (`node:22-alpine` builda, `nginx:1.30-alpine` serve o resultado). O Nginx faz duas coisas — serve os arquivos estáticos com fallback de SPA (`try_files ... /index.html`, necessário pras rotas do `react-router` como `/transacoes`) e faz reverse proxy de `/api/*` pro container do backend pelo nome do serviço (`backend:8080`), replicando o `server.proxy` que o Vite já fazia em dev — nenhuma chamada `fetch('/api/...')` precisou mudar. `docker-compose.yml` ganhou o serviço `frontend` (porta `8081`), 5 containers no total agora.
+
+**CI** (`.github/workflows/ci.yml`), 3 jobs:
+- `backend`: `spotlessCheck` (lint, falha rápido) + `./gradlew build` (suíte completa, incluindo `LiquidacaoConcorrenciaIT` com Testcontainers — que **funciona** nos runners do GitHub, ao contrário deste ambiente de desenvolvimento local, cujo Docker Engine é novo demais pro probe do Testcontainers 1.21.x).
+- `frontend`: `oxlint` + `build` + `vitest`.
+- `docker-compose-smoke-test` (depende dos outros dois): sobe a stack completa via `docker compose up -d --build` e espera a API e o frontend responderem de verdade, não só que cada lado compila isolado.
+
+Triggers: `push`/`pull_request` em `dev`/`main`/`prod` + disparo manual.
+
+**Validado**: `docker compose up -d --build` local confirmando os 5 containers, `curl` provando que `http://localhost:8081/api/moedas` chega no backend através do proxy do Nginx, fallback de SPA respondendo `200` numa rota de cliente (`/transacoes`) direto na URL, e um screenshot Playwright do build de produção (idêntico ao modo dev, zero erros de console). YAML do workflow validado com `actionlint` (sem `act` disponível pra rodar Actions localmente) — zero avisos.
+
+**Próximo:** dar `push` pra `origin` pra o pipeline rodar de verdade no GitHub (ainda não empurrado — fica pra confirmação).
