@@ -17,6 +17,7 @@ import com.srmasset.creditengine.repository.TaxaCambioRepository;
 import com.srmasset.creditengine.repository.TaxaMercadoRepository;
 import com.srmasset.creditengine.repository.TipoRecebivelRepository;
 import com.srmasset.creditengine.service.LiquidacaoService;
+import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -70,6 +71,7 @@ class ExtratoLiquidacaoRepositoryIT {
   @Autowired private TaxaMercadoRepository taxaMercadoRepository;
   @Autowired private TaxaCambioRepository taxaCambioRepository;
   @Autowired private JdbcTemplate jdbcTemplate;
+  @Autowired private EntityManager entityManager;
 
   private Cedente cedenteA;
   private Cedente cedenteB;
@@ -112,6 +114,13 @@ class ExtratoLiquidacaoRepositoryIT {
     liquidacaoL1Id = l1.getId();
     liquidacaoL2Id = l2.getId();
     liquidacaoL3Id = l3.getId();
+
+    // O teste inteiro roda numa única transação (@Transactional, rollback no fim — nunca commita).
+    // O INSERT da última liquidação criada fica pendente no persistence context do Hibernate até
+    // um flush acontecer; como as leituras daqui pra frente são SQL puro via JdbcTemplate/
+    // NamedParameterJdbcTemplate (não passam pelo EntityManager), elas nunca disparariam esse
+    // flush sozinhas — sem isso, a liquidação mais recente simplesmente não aparecia pra query.
+    entityManager.flush();
 
     // criado_em é gerado pelo banco no INSERT (@Generated) — sobrescrito aqui via SQL direto pra
     // controlar datas determinísticas nos testes de filtro por período/ordenação.
