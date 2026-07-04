@@ -44,6 +44,7 @@ docker-compose.yml → orquestra Frontend + API + PostgreSQL + Prometheus + Graf
 - [x] CI/CD (GitHub Actions: lint + testes de backend e frontend + smoke test do `docker-compose` completo) e frontend containerizado (Nginx) no `docker-compose`
 - [x] Logs estruturados (JSON/ECS) com correlation id (`requestId`) por requisição, correlacionando todas as linhas de log de uma mesma chamada — ver `ROADMAP.md`
 - [x] Cobertura de testes completa: services de negócio, controllers (`@WebMvcTest`), relatório (Testcontainers), exception handler no backend; hooks orquestradores e componentes de composição no frontend — ver `ROADMAP.md`
+- [x] Diagrama C4 (Nível 1 e 2) e critérios de aceite documentados (usabilidade, segurança, desempenho, escalabilidade) — ver [`docs/diagrama-c4.md`](./docs/diagrama-c4.md) e [`docs/criterios-aceite.md`](./docs/criterios-aceite.md)
 
 ## Como rodar (stack completa: API + banco + observabilidade)
 
@@ -124,5 +125,7 @@ Duas telas: **Painel do Operador** (`/painel`) — cadastra e liquida um recebí
 
 - [`ROADMAP.md`](./ROADMAP.md) — entendimento do problema, decisões de domínio e progresso técnico, passo a passo.
 - [`docs/diagrama-er.md`](./docs/diagrama-er.md) — diagrama ER, decisões de tipo/precisão numérica e gaps conhecidos do modelo de dados.
+- [`docs/diagrama-c4.md`](./docs/diagrama-c4.md) — diagrama C4 (Nível 1 — Contexto, Nível 2 — Container).
+- [`docs/criterios-aceite.md`](./docs/criterios-aceite.md) — critérios de aceite formais (usabilidade, segurança, desempenho, escalabilidade), com status e evidência por item.
 - [`AI_USAGE.md`](./AI_USAGE.md) — uso de IA no desenvolvimento (prompts, correções, análise crítica).
 - [`CLAUDE.md`](./CLAUDE.md) — enunciado completo do desafio técnico.
