@@ -13,7 +13,8 @@ Desenvolvido como desafio técnico, nível **Sênior** (foco em Observabilidade,
 | Documentação de API | OpenAPI/Swagger (springdoc) |
 | Observabilidade | Spring Boot Actuator + Micrometer → Prometheus → Grafana |
 | Testes (backend) | JUnit 5, Testcontainers (Postgres) |
-| Frontend | TypeScript + React, build com Vite |
+| Frontend | TypeScript + React + Vite, Tailwind CSS v4, TanStack Query, React Router, React Hook Form + Zod |
+| Testes (frontend) | Vitest + Testing Library |
 
 ## Estrutura do repositório
 
@@ -36,7 +37,7 @@ docker-compose.yml → orquestra API + PostgreSQL + Prometheus + Grafana
 - [x] Modelo de dados (Diagrama ER + DDL) e migrations Flyway — ver [`docs/diagrama-er.md`](./docs/diagrama-er.md)
 - [x] `docker-compose` (API + PostgreSQL + Prometheus + Grafana) — validado de ponta a ponta
 - [x] Camadas de aplicação / negócio / persistência e motor de precificação (Strategy Pattern) — API funcional de ponta a ponta, ver `ROADMAP.md`
-- [ ] Painel do Operador e Grid de Transações (telas reais)
+- [x] Painel do Operador (simulação em tempo real) e Grid de Transações (paginação/filtros server-side) — ver `ROADMAP.md`
 - [ ] CI/CD
 
 ## Como rodar (stack completa: API + banco + observabilidade)
@@ -90,12 +91,14 @@ export DB_PASSWORD=srm
 | `GET`/`POST` | `/api/taxas-cambio` | Consulta/registra taxa de câmbio vigente |
 | `GET`/`POST` | `/api/taxas-mercado` | Consulta/registra taxa de mercado (CDI/SOFR) vigente |
 | `GET` | `/api/relatorios/extrato-liquidacao` | Extrato paginado/filtrado (cedente, moeda, período) — 2 camadas, SQL nativo |
+| `POST` | `/api/recebiveis/simular` | Read-only: calcula o valor líquido sem persistir nada (usado pelo Painel do Operador) |
+| `GET` | `/api/moedas`, `/api/tipos-recebivel` | Catálogos (BRL/USD, Duplicata Mercantil/Cheque Pré-datado) |
 
 Contratos completos no Swagger UI.
 
 ## Como rodar (frontend)
 
-Pré-requisito: Node.js 22+.
+Pré-requisito: Node.js 22+ e o backend no ar (`docker compose up -d` na raiz, ou `./gradlew bootRun`) — o Vite tem um proxy de dev para `/api` → `localhost:8080`.
 
 ```bash
 cd frontend
@@ -103,7 +106,7 @@ npm install
 npm run dev   # http://localhost:5173
 ```
 
-Ainda é o scaffold padrão do Vite — as telas do Painel do Operador e do Grid de Transações são o próximo passo do frontend (ver `ROADMAP.md`).
+Duas telas: **Painel do Operador** (`/painel`) — cadastra e liquida um recebível, com o valor líquido calculado em tempo real conforme o formulário é preenchido — e **Grid de Transações** (`/transacoes`) — histórico paginado com filtros por cedente/moeda/período, refletidos na URL.
 
 ## Documentação
 

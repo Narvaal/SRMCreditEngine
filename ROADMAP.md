@@ -133,3 +133,20 @@ Backend funcional de ponta a ponta: `domain` (9 entidades JPA + 2 enums, mapeada
 - Bugs reais encontrados e corrigidos durante a verificação: `documento` duplicado de cedente vazava como 500 genérico (virou 409 `CEDENTE_DUPLICADO`), e `criado_em` voltava `null` nas respostas (Hibernate não relia colunas `insertable=false` após o INSERT — corrigido com `@Generated(event = INSERT)`).
 
 **Próximo:** telas do frontend (Painel do Operador, Grid de Transações) consumindo essa API.
+
+### Passo 6 — Frontend (Painel do Operador + Grid de Transações) _(concluído)_
+
+**3 endpoints novos no backend, antes do frontend em si** — não havia forma de calcular o valor líquido em tempo real sem persistir:
+- `POST /api/recebiveis/simular` — reaproveita os mesmos beans de `LiquidacaoService` (`PricingStrategyResolver`, `MotorPrecificacao`, `PrazoCalculator`, `TaxaMercadoService`, `CambioService`) num `SimulacaoService` novo, que deliberadamente não injeta nenhum repositório de escrita — a ausência na assinatura da classe é a garantia de que simular nunca tem efeito colateral (confirmado: `totalElements` do extrato não mudou depois de rodar a simulação).
+- `GET /api/moedas` e `GET /api/tipos-recebivel` — catálogos que antes só existiam como seed, sem endpoint de listagem.
+- Refactor no caminho: extraída `CambioService.buscarSeNecessario` (mesma moeda ⟹ sem conversão) pra não duplicar essa checagem entre `LiquidacaoService` e `SimulacaoService`.
+
+**Frontend**: React + TypeScript + Vite + Tailwind CSS v4 (tema escuro, acento verde único — `canvas`/`surface`/`ink`/`brand` via `@theme`), `react-router-dom` (2 rotas), `@tanstack/react-query` (cache de servidor — resposta ao "gerenciamento de estado global, se necessário": sem Redux/Zustand, três fontes de verdade bem delimitadas — formulário no `react-hook-form`, filtros/paginação na URL, dados de servidor no `react-query`), `react-hook-form` + `zod`. Estrutura em `api/` (client tipado) → `domain/` (hooks de lógica/estado, sem JSX) → `components/ui/` (apresentação pura, nunca importa `api/`/`domain/`) → `features/*` (composição).
+
+**Painel do Operador**: `usePainelOperadorForm` observa os campos que afetam preço (excluindo `cedenteId`, que não influencia o cálculo), aplica debounce de 450ms, e chama `/simular` só quando os campos passam na validação Zod local — exibindo o valor líquido calculado em tempo real antes de submeter o lote de verdade.
+
+**Grid de Transações**: filtros e paginação vivem na URL (compartilhável, sobrevive a refresh, vira a `queryKey`). Conversão do "até" inclusivo do operador pro `dataFim` exclusivo que o backend espera (`criado_em < dataFim`) isolada num helper — evita excluir sistematicamente o último dia do período.
+
+**Validado com Playwright** (headless, já que o ambiente não tem display): simulação atualizando em tempo real ao preencher o formulário, submissão do lote com sucesso, navegação pro Grid, zero erros de console. Um bug real foi pego pelo próprio screenshot, não pelo código: a coluna de "deságio %" comparava `valorFace`/`valorLiquido` em moedas diferentes numa linha cross-currency (BRL→USD), produzindo um percentual sem sentido (82%) — corrigido pra só calcular quando `moedaTitulo === moedaPagamento`, com teste cobrindo o caso.
+
+**Próximo:** CI/CD (pipeline com testes + lint), e opcionalmente adicionar o frontend ao `docker-compose`.
