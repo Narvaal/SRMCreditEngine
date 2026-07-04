@@ -32,6 +32,15 @@ services:
       postgres:
         condition: service_healthy
 
+  frontend:
+    build:
+      context: ./frontend
+    container_name: srm-frontend
+    ports:
+      - "8081:80"
+    depends_on:
+      - backend
+
   prometheus:
     image: prom/prometheus:v3.13.0
     container_name: srm-prometheus
