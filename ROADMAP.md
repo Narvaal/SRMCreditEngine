@@ -97,6 +97,7 @@ Motivo: 1 repositório público (como pede a entrega), 1 README raiz, 1 pipeline
 Acumulando os requisitos de Júnior + Pleno + Sênior do desafio:
 
 - **Branching:** nunca commit direto na `main`. Branches de trabalho por tarefa: `feature/<nome>`, `fix/<nome>`, `docs/<nome>`, `chore/<nome>` (ex.: `feature/currency-engine`, `feature/pricing-strategy`).
+  - _Nota (auditoria final, 2026-07-04): na prática o fluxo evoluiu pra trunk-based sobre `dev` — commits atômicos direto em `dev`, promoção pra `main` via PR (#1, #2, #4) e `prod` reservada ao exercício de gestão de crise. Os prefixos `feature/*` planejados aqui nunca chegaram a ser usados; o plano original fica registrado por honestidade histórica, e a estratégia real (com a justificativa) está no README, seção "Estratégia de branching"._
 - **Conventional Commits obrigatório:** `feat:`, `fix:`, `docs:`, `test:`, `refactor:`, `chore:`, `ci:`, `build:`, `perf:`.
 - **Pull Requests mesmo solo:** cada feature vira um PR pra `main` (via `gh pr create`), com descrição do que foi feito — simula revisão de time real.
 - **Histórico limpo:** squash/rebase de commits pequenos de correção antes do merge — sem merge commits desnecessários poluindo o histórico.
@@ -225,6 +226,18 @@ Fecha o último requisito explícito do nível Sênior. O problema registrado na
 
 **Validado nos dois níveis**: `FxProviderResilienceIT` (Testcontainers + `DEFINED_PORT`, roda no CI — verde na primeira execução) prova retry (3 chamadas HTTP no contador), short-circuit (0 chamadas com circuito aberto) e degradação graciosa (liquidação com a última taxa persistida enquanto o provider está fora). Manualmente contra o `docker-compose`: ciclo completo **closed → open → half-open → closed** observado em `resilience4j_circuitbreaker_state` no `/actuator/prometheus`, incluindo o detalhe de que o `half_open` exige 2 chamadas boas (`permitted-number-of-calls-in-half-open-state`) antes de fechar.
 
+### Passo 14 — Auditoria final contra o enunciado _(concluído)_
+
+Leitura sistemática do projeto inteiro contra o `CLAUDE.md`, em 5 dimensões (conformidade acumulativa Júnior→Pleno→Sênior, excessos de nível Especialista, consistência docs↔repo, higiene de código, critérios de avaliação da seção 8). **Conformidade: 100% dos itens acumulativos com evidência concreta.** Achados corrigidos:
+
+- **P0 — Fundamentação teórica da stack não existia** (critério de avaliação 8.1, prometida no Passo 2 deste roadmap e nunca escrita): adicionada ao README, com cada escolha amarrada ao domínio financeiro em vez de preferência genérica.
+- **P1 — Pre-push hook permanentemente inutilizado**: rodava a suíte completa incluindo os 3 `*IT` que sempre falham neste ambiente (Testcontainers), forçando `--no-verify` em todo push — o que pulava também os testes de frontend. Corrigido: o hook roda só `--tests '*Test'` (unit/slice); os `*IT` continuam no CI. Hook voltou a funcionar de verdade.
+- **P1 — Este roadmap prometia branches `feature/*` que nunca foram usadas**: o fluxo real evoluiu pra trunk-based sobre `dev` com promoção via PR — nota de honestidade adicionada ao Passo 2, apontando pra estratégia real no README.
+- **P1 — Contagens de teste desatualizadas** (99→111 unit/slice, 2→3 ITs) e **badge de release preso na tag `v1.0.0`** (→ `/releases/latest`).
+- **P2 — Escopo Especialista implícito**: nota explícita no README dizendo o que ficou deliberadamente de fora (ADRs, 1M tx/min, IaC, EDA) e por que as duas exceções de Git entraram.
+
+Higiene: zero TODOs/código de debug, `.gitignore` completo, sem dependências mortas.
+
 ---
 
 ## Pendências (retomar na próxima sessão)
@@ -240,7 +253,7 @@ Nenhum — todos os requisitos explícitos do nível Sênior foram fechados (o �
 
 ### Cobertura de testes _(concluído — ver Passo 9)_
 
-- **Backend**: services de negócio (`LiquidacaoService`, `LiquidacaoBatchService`, `CambioService`, `TaxaMercadoService`, `RecebivelService`, `CedenteService`), `GlobalExceptionHandler`, os 8 controllers REST (`@WebMvcTest`) e `ExtratoLiquidacaoRepository` (Testcontainers) — todos com teste dedicado agora. 99 testes de unidade/slice verdes localmente + 2 testes de integração (Testcontainers) que rodam no CI mas não neste ambiente de desenvolvimento local (limitação de Docker Engine já documentada).
+- **Backend**: services de negócio (`LiquidacaoService`, `LiquidacaoBatchService`, `CambioService`, `TaxaMercadoService`, `RecebivelService`, `CedenteService`, `SincronizacaoTaxasService`), `GlobalExceptionHandler`, os 9 controllers REST (`@WebMvcTest`), `ExtratoLiquidacaoRepository` e a camada de resiliência — todos com teste dedicado. 111 testes de unidade/slice verdes localmente + 3 testes de integração (Testcontainers: concorrência, relatório e resiliência) que rodam no CI mas não neste ambiente de desenvolvimento local (limitação de Docker Engine já documentada).
 - **Frontend**: os dois hooks orquestradores (`usePainelOperadorForm`, `useExtratoFiltrosUrlState`), `useExtratoLiquidacaoQuery` e os 4 componentes de composição (`RecebivelForm`, `FiltrosTransacoes`, `PainelOperadorPage`, `GridTransacoesPage`) — 53 testes verdes.
 
 ### Nice-to-have / polish
@@ -252,4 +265,4 @@ Nenhum — todos os requisitos explícitos do nível Sênior foram fechados (o �
 
 ### Recapitulando o que já está pronto
 
-Passos 1–13 concluídos: entendimento do domínio → stack/estrutura/git workflow → modelo de dados (ER+DDL) → `docker-compose` (Postgres+Prometheus+Grafana) → camada de aplicação completa (Strategy Pattern, Optimistic Locking, exceções, relatório 2 camadas) → frontend (Painel do Operador com simulação em tempo real + Grid de Transações) → CI/CD (GitHub Actions, 3 jobs) + frontend containerizado no compose → logs estruturados (ECS) com correlation id por requisição → cobertura de testes completa (backend + frontend) → diagrama C4 e critérios de aceite documentados → primeiro release (`dev → main`, tag `v1.0.0`) → simulação de gestão de crise (`git cherry-pick` de hotfix pra `prod`, tag `v1.0.1`) → resiliência com Resilience4j (retry + circuit breaker sobre integração externa simulada). **Todos os requisitos explícitos do nível Sênior estão fechados.** Aplicação sobe com 1 comando (`docker compose up -d --build`), 5 containers, testada de ponta a ponta manualmente e via CI real no GitHub.
+Passos 1–14 concluídos: entendimento do domínio → stack/estrutura/git workflow → modelo de dados (ER+DDL) → `docker-compose` (Postgres+Prometheus+Grafana) → camada de aplicação completa (Strategy Pattern, Optimistic Locking, exceções, relatório 2 camadas) → frontend (Painel do Operador com simulação em tempo real + Grid de Transações) → CI/CD (GitHub Actions, 3 jobs) + frontend containerizado no compose → logs estruturados (ECS) com correlation id por requisição → cobertura de testes completa (backend + frontend) → diagrama C4 e critérios de aceite documentados → primeiro release (`dev → main`, tag `v1.0.0`) → simulação de gestão de crise (`git cherry-pick` de hotfix pra `prod`, tag `v1.0.1`) → resiliência com Resilience4j (retry + circuit breaker sobre integração externa simulada, tag `v1.1.0`) → auditoria final contra o enunciado (fundamentação teórica da stack, hook de pre-push funcional de novo, consistência docs↔repo). **Todos os requisitos explícitos do nível Sênior estão fechados e auditados.** Aplicação sobe com 1 comando (`docker compose up -d --build`), 5 containers, testada de ponta a ponta manualmente e via CI real no GitHub.
