@@ -14,7 +14,7 @@ interface FiltrosTransacoesProps extends FiltrosEditaveis {
 export function FiltrosTransacoes({ cedenteId, moeda, dataInicio, dataFim, cedentes, moedas, onChange }: FiltrosTransacoesProps) {
   return (
     <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-      <Select label="Cedente" value={cedenteId} onChange={(e) => onChange({ cedenteId: e.target.value })}>
+      <Select name="cedenteId" label="Cedente" value={cedenteId} onChange={(e) => onChange({ cedenteId: e.target.value })}>
         <option value="">Todos</option>
         {cedentes.map((cedente) => (
           <option key={cedente.id} value={cedente.id}>
@@ -23,7 +23,7 @@ export function FiltrosTransacoes({ cedenteId, moeda, dataInicio, dataFim, ceden
         ))}
       </Select>
 
-      <Select label="Moeda" value={moeda} onChange={(e) => onChange({ moeda: e.target.value })}>
+      <Select name="moeda" label="Moeda" value={moeda} onChange={(e) => onChange({ moeda: e.target.value })}>
         <option value="">Todas</option>
         {moedas.map((m) => (
           <option key={m.codigo} value={m.codigo}>
@@ -32,8 +32,8 @@ export function FiltrosTransacoes({ cedenteId, moeda, dataInicio, dataFim, ceden
         ))}
       </Select>
 
-      <DateField label="De" value={dataInicio} onChange={(e) => onChange({ dataInicio: e.target.value })} />
-      <DateField label="Até" value={dataFim} onChange={(e) => onChange({ dataFim: e.target.value })} />
+      <DateField name="dataInicio" label="De" value={dataInicio} onChange={(e) => onChange({ dataInicio: e.target.value })} />
+      <DateField name="dataFim" label="Até" value={dataFim} onChange={(e) => onChange({ dataFim: e.target.value })} />
     </div>
   )
 }
