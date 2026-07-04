@@ -21,6 +21,38 @@ logging:
     format:
       console: ecs
 
+# Integração com o provider de taxas (mockado em /mock/fx-provider — ver MockFxProviderController).
+fx-provider:
+  base-url: http://localhost:${server.port:8080}/mock/fx-provider
+  sync:
+    enabled: ${FX_PROVIDER_SYNC_ENABLED:false}
+    fixed-delay: ${FX_PROVIDER_SYNC_FIXED_DELAY:60000}
+
+mock:
+  fx-provider:
+    failure-rate: 0.0
+
+resilience4j:
+  retry:
+    instances:
+      fxProvider:
+        max-attempts: 3
+        wait-duration: 200ms
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2
+        ignore-exceptions:
+          # Circuito aberto = falha imediata; re-tentar contra um circuito aberto é inútil.
+          - io.github.resilience4j.circuitbreaker.CallNotPermittedException
+  circuitbreaker:
+    instances:
+      fxProvider:
+        sliding-window-size: 10
+        minimum-number-of-calls: 4
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 2
+        automatic-transition-from-open-to-half-open-enabled: true
+
 management:
   endpoints:
     web:
