@@ -13,7 +13,7 @@ Desenvolvido como desafio técnico, nível **Sênior** (foco em Observabilidade,
 | Backend | Java 21 + Spring Boot 3.5, build com Gradle (Kotlin DSL) |
 | Banco de dados | PostgreSQL, migrations com Flyway |
 | Documentação de API | OpenAPI/Swagger (springdoc) |
-| Observabilidade | Spring Boot Actuator + Micrometer → Prometheus → Grafana |
+| Observabilidade | Spring Boot Actuator + Micrometer → Prometheus → Grafana; logs estruturados (JSON, formato ECS) com correlation id por requisição |
 | Testes (backend) | JUnit 5, Testcontainers (Postgres) |
 | Frontend | TypeScript + React + Vite, Tailwind CSS v4, TanStack Query, React Router, React Hook Form + Zod |
 | Testes (frontend) | Vitest + Testing Library |
@@ -42,6 +42,8 @@ docker-compose.yml → orquestra Frontend + API + PostgreSQL + Prometheus + Graf
 - [x] Camadas de aplicação / negócio / persistência e motor de precificação (Strategy Pattern) — API funcional de ponta a ponta, ver `ROADMAP.md`
 - [x] Painel do Operador (simulação em tempo real) e Grid de Transações (paginação/filtros server-side) — ver `ROADMAP.md`
 - [x] CI/CD (GitHub Actions: lint + testes de backend e frontend + smoke test do `docker-compose` completo) e frontend containerizado (Nginx) no `docker-compose`
+- [x] Cobertura de testes do backend (services de negócio, exception handler) e dos hooks orquestradores do frontend — ver `ROADMAP.md`
+- [x] Logs estruturados (JSON/ECS) com correlation id (`requestId`) por requisição, correlacionando todas as linhas de log de uma mesma chamada — ver `ROADMAP.md`
 
 ## Como rodar (stack completa: API + banco + observabilidade)
 
@@ -64,6 +66,8 @@ Sobe 5 containers: `postgres` (aplica as 11 migrations Flyway automaticamente no
 | Grafana | http://localhost:3000 | login `admin` / `admin`; datasource do Prometheus já provisionado |
 
 Para derrubar tudo (incluindo os volumes de dados): `docker compose down -v`.
+
+Logs estruturados (JSON, formato ECS) no console do backend: `docker compose logs -f backend`. Cada linha carrega `requestId` (correlaciona todas as linhas de uma mesma requisição HTTP) e, nas linhas de negócio, campos próprios (`recebivelId`, `valorLiquido`, `totalSucesso` etc.) como chaves estruturadas, não só texto.
 
 ## Como rodar (backend isolado, sem Docker)
 

@@ -166,25 +166,37 @@ Triggers: `push`/`pull_request` em `dev`/`main`/`prod` + disparo manual.
 
 **Push feito e workflow rodou de verdade no GitHub**: `success` em 5m37s, os 3 jobs verdes — incluindo `LiquidacaoConcorrenciaIT` (Testcontainers), que confirma na prática que a limitação era mesmo só deste ambiente de desenvolvimento local, não do código (o Docker Engine dos runners do GitHub está na faixa de API que o Testcontainers espera).
 
+### Passo 8 — Logs Estruturados (ECS) _(concluído)_
+
+**Decisão ECS vs. GELF**: Spring Boot 3.5 suporta ambos nativamente via `logging.structured.format.console`, custo de implementação idêntico (config de 1 linha, zero dependência nova). Escolhido **ECS** (Elastic Common Schema): campos auto-descritivos (`log.level`, `service.name`) que leem bem cru, sem precisar de um coletor dedicado — GELF assume a existência de um Graylog (historicamente Elasticsearch/OpenSearch + MongoDB) que o projeto não roda e não planeja rodar; ECS, ao contrário, é o formato nativo tanto de um eventual stack Elastic quanto do **Grafana Loki** — a extensão natural do Grafana que o projeto já provisiona, caso a stack de observabilidade cresça.
+
+**Escopo além da config**: ligar só o formato JSON estruturaria principalmente logs de framework (Spring/Hibernate/Flyway no boot) — o backend não tinha nenhum log de negócio até então (só 2 linhas em `GlobalExceptionHandler`). Adicionado:
+- `CorrelationIdFilter` (`OncePerRequestFilter`, `@Order(HIGHEST_PRECEDENCE)`): popula `requestId` no MDC pra cada requisição (aproveitando `X-Request-Id` de entrada, se vier) — o formatter ECS promove chaves do MDC automaticamente pro JSON, correlacionando todas as linhas de uma mesma requisição sem precisar passar o id manualmente por camada. `GlobalExceptionHandler.handleInesperado` passou a ler esse id do MDC em vez de gerar um `UUID` solto só ali.
+- Logs INFO estruturados (API fluente do SLF4J com `addKeyValue`, não só texto interpolado) no caminho feliz de `LiquidacaoService.liquidar`/`estornar` e no resumo de `LiquidacaoBatchService.processarLote` (totais do lote).
+- Logs WARN em `GlobalExceptionHandler.handleConflito`/`handleRegraNegocio` — cobre saldo insuficiente, conflito de concorrência, estorno inválido, cedente duplicado etc. num único lugar, sem duplicar chamada de log em cada service.
+
+**Validado de ponta a ponta** via `docker compose up -d --build` + chamadas reais de API: JSON ECS válido desde o boot (`@timestamp`, `log.level`, `service.name`, `ecs.version`), mesmo `requestId` correlacionando todas as linhas de uma mesma requisição (inclusive entre o erro do Hibernate e a tradução em `GlobalExceptionHandler`), `log.warn` disparando corretamente em `GET /api/taxas-mercado` sem taxa cadastrada (422) e em estorno inválido (409), `log.atInfo` de liquidação/lote com os campos de negócio (`recebivelId`, `valorLiquido`, `totalSucesso`) como chaves estruturadas de verdade, não só mensagem de texto.
+
 ---
 
 ## Pendências (retomar na próxima sessão)
 
-Levantamento feito ao final do dia 2026-07-03, revisando `CLAUDE.md` (enunciado) contra o que já foi entregue. Nada aqui é urgente — a aplicação já é funcional de ponta a ponta (backend + frontend + CI/CD) — mas fica registrado pra não perder o fio.
+Levantamento original feito ao final do dia 2026-07-03, revisando `CLAUDE.md` (enunciado) contra o que já foi entregue; atualizado em 2026-07-04 conforme os itens abaixo foram fechados. Nada aqui é urgente — a aplicação já é funcional de ponta a ponta (backend + frontend + CI/CD) — mas fica registrado pra não perder o fio.
 
 ### Requisitos explícitos do desafio ainda em aberto (nível Sênior)
 
 - **Diagrama C4 (Nível 1 — Contexto, Nível 2 — Container)**: exigido explicitamente na seção 6 do desafio pro nível Sênior. Ainda não existe nenhum diagrama de arquitetura além do ER (`docs/diagrama-er.md`).
 - **Critérios de aceite documentados** (usabilidade, segurança, desempenho, escalabilidade — seção 5 do desafio): discutimos informalmente ao longo do desenvolvimento, mas não existe um documento formal listando isso.
 - **Tag semântica de versão** (`v1.0.0`): nenhuma tag criada ainda. Faz sentido marcar quando dermos o primeiro PR `dev → prod` (ver critério já definido no Passo 2 do roadmap: só promover quando tiver um fluxo vertical completo — o que já temos agora).
-- **Interactive Rebase**: usamos Conventional Commits em commits atômicos o tempo todo, mas ainda não demonstramos organizar/squashar commits via `git rebase -i` antes de um merge — é um requisito de Git explícito do nível Sênior.
-- **Logs estruturados**: hoje só temos métricas (Prometheus/Grafana), não logs estruturados. Spring Boot 3.5 suporta nativamente via `logging.structured.format.console` (ex.: formato ECS ou GELF) — deveria ser barato de habilitar.
+- **Interactive Rebase**: ~~usamos Conventional Commits em commits atômicos o tempo todo, mas ainda não demonstramos organizar/squashar commits via `git rebase -i` antes de um merge~~ — **feito**: os 7 commits de teste do backend (ver "Cobertura de testes" abaixo) foram commitados fora de ordem de propósito e reorganizados via `git rebase -i` numa sequência lógica (núcleo transacional → services de domínio → cross-cutting) antes do push.
 - **Resiliência (retry/circuit breaker)**: o sistema hoje não tem nenhuma chamada HTTP externa de verdade pra proteger — taxas de câmbio/mercado são só `POST` manual (mockado). Vale avaliar se simulamos uma integração externa de verdade (ex.: um client mockado tipo "BACEN/FX provider") só pra ter algo real onde aplicar Resilience4j, já que sem uma chamada externa esse requisito fica sem "alvo".
 
 ### Cobertura de testes
 
-- **Backend**: `LiquidacaoService` — o coração do sistema (transação + Optimistic Locking) — só é testado indiretamente (`LiquidacaoConcorrenciaIT` + smoke manual), sem teste unitário dedicado com repositórios mockados cobrindo `liquidar`/`estornar` isoladamente (casos de erro: saldo insuficiente, recebível já liquidado, estorno duplicado). `RecebivelService`, `CedenteService`, `CambioService`, `TaxaMercadoService` e `GlobalExceptionHandler` também sem teste próprio ainda.
-- **Frontend**: `usePainelOperadorForm` (o hook orquestrador central) e `useExtratoFiltrosUrlState`/`useExtratoLiquidacaoQuery` ainda sem teste direto (só as peças que eles usam foram testadas isoladamente). Componentes de composição (`PainelOperadorPage`, `GridTransacoesPage`, `RecebivelForm`, `FiltrosTransacoes`) também sem teste.
+- **Backend — feito**: `LiquidacaoService` (`liquidar`/`estornar`, incluindo saldo insuficiente, recebível já liquidado, conflito de Optimistic Locking, estorno duplicado), `LiquidacaoBatchService` (resultado parcial do lote), `CambioService`, `TaxaMercadoService`, `RecebivelService`, `CedenteService` e `GlobalExceptionHandler` (mapeamento exceção→status HTTP) — todos com teste unitário dedicado agora (68 testes de unidade, mais o `LiquidacaoConcorrenciaIT` de integração).
+- **Backend — ainda em aberto**: `ExtratoLiquidacaoRepository` (SQL nativo montado dinamicamente — melhor coberto com Testcontainers do que mock) e os controllers (`@WebMvcTest` pros status HTTP, hoje só validados via smoke manual/Swagger).
+- **Frontend — feito**: `usePainelOperadorForm` (debounce, `cedenteId` não afeta simulação, reset pós-submissão) e `useExtratoFiltrosUrlState` (defaults, conversão de `dataFim` inclusiva→exclusiva) — os dois hooks orquestradores centrais.
+- **Frontend — ainda em aberto**: componentes de composição (`PainelOperadorPage`, `GridTransacoesPage`, `RecebivelForm`, `FiltrosTransacoes`) e `useExtratoLiquidacaoQuery`.
 
 ### Nice-to-have / polish
 
@@ -195,4 +207,4 @@ Levantamento feito ao final do dia 2026-07-03, revisando `CLAUDE.md` (enunciado)
 
 ### Recapitulando o que já está pronto
 
-Passos 1–7 concluídos: entendimento do domínio → stack/estrutura/git workflow → modelo de dados (ER+DDL) → `docker-compose` (Postgres+Prometheus+Grafana) → camada de aplicação completa (Strategy Pattern, Optimistic Locking, exceções, relatório 2 camadas) → frontend (Painel do Operador com simulação em tempo real + Grid de Transações) → CI/CD (GitHub Actions, 3 jobs) + frontend containerizado no compose. Aplicação sobe com 1 comando (`docker compose up -d --build`), 5 containers, testada de ponta a ponta manualmente e via CI real no GitHub.
+Passos 1–8 concluídos: entendimento do domínio → stack/estrutura/git workflow → modelo de dados (ER+DDL) → `docker-compose` (Postgres+Prometheus+Grafana) → camada de aplicação completa (Strategy Pattern, Optimistic Locking, exceções, relatório 2 camadas) → frontend (Painel do Operador com simulação em tempo real + Grid de Transações) → CI/CD (GitHub Actions, 3 jobs) + frontend containerizado no compose → logs estruturados (ECS) com correlation id por requisição. Aplicação sobe com 1 comando (`docker compose up -d --build`), 5 containers, testada de ponta a ponta manualmente e via CI real no GitHub.
