@@ -1,5 +1,7 @@
 # SRM Credit Engine
 
+[![CI](https://github.com/Narvaal/SRMCreditEngine/actions/workflows/ci.yml/badge.svg)](https://github.com/Narvaal/SRMCreditEngine/actions/workflows/ci.yml)
+
 Plataforma de cessão de crédito multimoedas. Recebe lotes de recebíveis (duplicatas, cheques pré-datados, etc.), calcula o deságio de cada um com base no risco do ativo e na moeda de liquidação, e registra a liquidação de forma auditável.
 
 Desenvolvido como desafio técnico, nível **Sênior** (foco em Observabilidade, Escalabilidade e Automação). O raciocínio de negócio, decisões de domínio e progresso técnico são documentados em [`ROADMAP.md`](./ROADMAP.md); o uso de IA no desenvolvimento é documentado em [`AI_USAGE.md`](./AI_USAGE.md); o enunciado completo do desafio está em [`CLAUDE.md`](./CLAUDE.md).
@@ -25,7 +27,8 @@ Monorepo:
 /frontend   → Painel do Operador e Grid de Transações (TypeScript / React / Vite)
 /docs       → Diagrama ER, DDL, diagrama C4, ADRs — conforme o roadmap avança
 /infra      → Configuração de Prometheus e Grafana (provisionamento, scrape config)
-docker-compose.yml → orquestra API + PostgreSQL + Prometheus + Grafana
+/.github/workflows → pipeline de CI (GitHub Actions)
+docker-compose.yml → orquestra Frontend + API + PostgreSQL + Prometheus + Grafana
 ```
 
 ## Status atual
@@ -38,7 +41,7 @@ docker-compose.yml → orquestra API + PostgreSQL + Prometheus + Grafana
 - [x] `docker-compose` (API + PostgreSQL + Prometheus + Grafana) — validado de ponta a ponta
 - [x] Camadas de aplicação / negócio / persistência e motor de precificação (Strategy Pattern) — API funcional de ponta a ponta, ver `ROADMAP.md`
 - [x] Painel do Operador (simulação em tempo real) e Grid de Transações (paginação/filtros server-side) — ver `ROADMAP.md`
-- [ ] CI/CD
+- [x] CI/CD (GitHub Actions: lint + testes de backend e frontend + smoke test do `docker-compose` completo) e frontend containerizado (Nginx) no `docker-compose`
 
 ## Como rodar (stack completa: API + banco + observabilidade)
 
@@ -48,10 +51,11 @@ Pré-requisito: Docker + Docker Compose.
 docker compose up -d --build
 ```
 
-Sobe 4 containers: `postgres` (aplica as 11 migrations Flyway automaticamente no boot da API), `backend`, `prometheus` e `grafana`.
+Sobe 5 containers: `postgres` (aplica as 11 migrations Flyway automaticamente no boot da API), `backend`, `frontend` (build de produção, servido por Nginx), `prometheus` e `grafana`.
 
 | Serviço | URL | Notas |
 |---|---|---|
+| Frontend | http://localhost:8081 | Nginx serve o build estático e faz proxy de `/api/*` pro backend |
 | API | http://localhost:8080 | |
 | Swagger UI | http://localhost:8080/swagger-ui/index.html | |
 | Health check | http://localhost:8080/actuator/health | |
@@ -96,9 +100,9 @@ export DB_PASSWORD=srm
 
 Contratos completos no Swagger UI.
 
-## Como rodar (frontend)
+## Como rodar (frontend isolado, modo dev — hot reload)
 
-Pré-requisito: Node.js 22+ e o backend no ar (`docker compose up -d` na raiz, ou `./gradlew bootRun`) — o Vite tem um proxy de dev para `/api` → `localhost:8080`.
+Pré-requisito: Node.js 22+ e o backend no ar (`docker compose up -d` na raiz, ou `./gradlew bootRun`) — o Vite tem um proxy de dev para `/api` → `localhost:8080` (o `docker-compose` acima já sobe o frontend como build de produção via Nginx; use este modo só quando estiver editando o frontend).
 
 ```bash
 cd frontend
@@ -107,6 +111,10 @@ npm run dev   # http://localhost:5173
 ```
 
 Duas telas: **Painel do Operador** (`/painel`) — cadastra e liquida um recebível, com o valor líquido calculado em tempo real conforme o formulário é preenchido — e **Grid de Transações** (`/transacoes`) — histórico paginado com filtros por cedente/moeda/período, refletidos na URL.
+
+## CI/CD
+
+`.github/workflows/ci.yml` — dispara em push/PR para `dev`/`main`/`prod` (e manualmente). 3 jobs: `backend` (`spotlessCheck` + `./gradlew build`, incluindo o teste de integração de concorrência com Testcontainers), `frontend` (`lint` + `build` + `test`), e `docker-compose-smoke-test` (sobe a stack completa via `docker compose up -d --build` e valida que API e frontend respondem de verdade, não só que cada lado builda isolado).
 
 ## Documentação
 
