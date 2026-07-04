@@ -164,4 +164,35 @@ Triggers: `push`/`pull_request` em `dev`/`main`/`prod` + disparo manual.
 
 **Validado**: `docker compose up -d --build` local confirmando os 5 containers, `curl` provando que `http://localhost:8081/api/moedas` chega no backend através do proxy do Nginx, fallback de SPA respondendo `200` numa rota de cliente (`/transacoes`) direto na URL, e um screenshot Playwright do build de produção (idêntico ao modo dev, zero erros de console). YAML do workflow validado com `actionlint` (sem `act` disponível pra rodar Actions localmente) — zero avisos.
 
-**Próximo:** dar `push` pra `origin` pra o pipeline rodar de verdade no GitHub (ainda não empurrado — fica pra confirmação).
+**Push feito e workflow rodou de verdade no GitHub**: `success` em 5m37s, os 3 jobs verdes — incluindo `LiquidacaoConcorrenciaIT` (Testcontainers), que confirma na prática que a limitação era mesmo só deste ambiente de desenvolvimento local, não do código (o Docker Engine dos runners do GitHub está na faixa de API que o Testcontainers espera).
+
+---
+
+## Pendências (retomar na próxima sessão)
+
+Levantamento feito ao final do dia 2026-07-03, revisando `CLAUDE.md` (enunciado) contra o que já foi entregue. Nada aqui é urgente — a aplicação já é funcional de ponta a ponta (backend + frontend + CI/CD) — mas fica registrado pra não perder o fio.
+
+### Requisitos explícitos do desafio ainda em aberto (nível Sênior)
+
+- **Diagrama C4 (Nível 1 — Contexto, Nível 2 — Container)**: exigido explicitamente na seção 6 do desafio pro nível Sênior. Ainda não existe nenhum diagrama de arquitetura além do ER (`docs/diagrama-er.md`).
+- **Critérios de aceite documentados** (usabilidade, segurança, desempenho, escalabilidade — seção 5 do desafio): discutimos informalmente ao longo do desenvolvimento, mas não existe um documento formal listando isso.
+- **Tag semântica de versão** (`v1.0.0`): nenhuma tag criada ainda. Faz sentido marcar quando dermos o primeiro PR `dev → prod` (ver critério já definido no Passo 2 do roadmap: só promover quando tiver um fluxo vertical completo — o que já temos agora).
+- **Interactive Rebase**: usamos Conventional Commits em commits atômicos o tempo todo, mas ainda não demonstramos organizar/squashar commits via `git rebase -i` antes de um merge — é um requisito de Git explícito do nível Sênior.
+- **Logs estruturados**: hoje só temos métricas (Prometheus/Grafana), não logs estruturados. Spring Boot 3.5 suporta nativamente via `logging.structured.format.console` (ex.: formato ECS ou GELF) — deveria ser barato de habilitar.
+- **Resiliência (retry/circuit breaker)**: o sistema hoje não tem nenhuma chamada HTTP externa de verdade pra proteger — taxas de câmbio/mercado são só `POST` manual (mockado). Vale avaliar se simulamos uma integração externa de verdade (ex.: um client mockado tipo "BACEN/FX provider") só pra ter algo real onde aplicar Resilience4j, já que sem uma chamada externa esse requisito fica sem "alvo".
+
+### Cobertura de testes
+
+- **Backend**: `LiquidacaoService` — o coração do sistema (transação + Optimistic Locking) — só é testado indiretamente (`LiquidacaoConcorrenciaIT` + smoke manual), sem teste unitário dedicado com repositórios mockados cobrindo `liquidar`/`estornar` isoladamente (casos de erro: saldo insuficiente, recebível já liquidado, estorno duplicado). `RecebivelService`, `CedenteService`, `CambioService`, `TaxaMercadoService` e `GlobalExceptionHandler` também sem teste próprio ainda.
+- **Frontend**: `usePainelOperadorForm` (o hook orquestrador central) e `useExtratoFiltrosUrlState`/`useExtratoLiquidacaoQuery` ainda sem teste direto (só as peças que eles usam foram testadas isoladamente). Componentes de composição (`PainelOperadorPage`, `GridTransacoesPage`, `RecebivelForm`, `FiltrosTransacoes`) também sem teste.
+
+### Nice-to-have / polish
+
+- Dashboard do Grafana com painéis reais — hoje só o datasource do Prometheus está provisionado (`infra/grafana/provisioning/dashboards/` ainda vazio).
+- UI de estorno no Grid de Transações — hoje o endpoint existe (`POST /api/liquidacoes/{id}/estorno`) mas só é acionável via API/Swagger, não tem botão na tela.
+- Cadastro de cedente direto no Painel do Operador — hoje o formulário só seleciona um cedente já existente (criado via API).
+- README: seção explícita justificando a estratégia de branching escolhida (`dev`/`prod`/`main`) — já praticamos o fluxo, mas falta documentar o "porquê" formalmente (é pedido explícito do nível Especialista, mas é barato de adicionar e reforça a maturidade de Git do Sênior).
+
+### Recapitulando o que já está pronto
+
+Passos 1–7 concluídos: entendimento do domínio → stack/estrutura/git workflow → modelo de dados (ER+DDL) → `docker-compose` (Postgres+Prometheus+Grafana) → camada de aplicação completa (Strategy Pattern, Optimistic Locking, exceções, relatório 2 camadas) → frontend (Painel do Operador com simulação em tempo real + Grid de Transações) → CI/CD (GitHub Actions, 3 jobs) + frontend containerizado no compose. Aplicação sobe com 1 comando (`docker compose up -d --build`), 5 containers, testada de ponta a ponta manualmente e via CI real no GitHub.
