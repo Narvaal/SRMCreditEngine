@@ -198,6 +198,20 @@ Primeira promoção de `dev` pra `main` desde o commit inicial (0 divergência a
 
 Tag anotada `v1.0.0` criada sobre o commit de merge (`101365c`) e uma [GitHub Release](https://github.com/Narvaal/SRMCreditEngine/releases/tag/v1.0.0) publicada a partir dela, marcando a entrega completa do nível Sênior — critério de Git explícito do desafio (`CLAUDE.md`, seção 6: "Semantic Versioning via Tags").
 
+### Passo 12 — Simulação de gestão de crise (`git cherry-pick`) _(concluído)_
+
+Depois do primeiro release, ficou a dúvida de qual seria a utilidade real da branch `prod` — hoje não existe nenhum deploy automatizado atrás dela (o `ci.yml` só roda lint/teste/smoke-test em `push`, não deploya em lugar nenhum). Decisão: `prod` não simula um ambiente real, ela existe especificamente pra demonstrar o exercício de gestão de crise do nível Especialista (`CLAUDE.md`, seção 6: "bug crítico foi para a `main` → demonstrar `git revert` seguro, ou `git cherry-pick` simulando hotfix em produção") — um exercício de processo, documentado como tal, não uma pretensão de infraestrutura que não existe.
+
+**O fix usado como veículo é real, não fabricado**: backend rodando como root nos containers, gap já documentado como `S9` em `docs/criterios-aceite.md`. Fluxo:
+
+1. `prod` sincronizada com `main` (fast-forward, 0 divergência — igual tinha acontecido com `main` no Passo 11).
+2. Fix implementado normalmente em `dev` (`backend/Dockerfile`: usuário `app` dedicado, não-root, no estágio de runtime) — validado de verdade: build da imagem, container rodando contra um Postgres real, `docker exec ... id` confirmando `uid=999(app)`, `/actuator/health` respondendo `UP` com as 11 migrations aplicadas.
+3. [PR #2](https://github.com/Narvaal/SRMCreditEngine/pull/2) `dev → main`, CI verde, merge normal — o fix passa pelo fluxo de review de sempre antes de qualquer coisa.
+4. `git cherry-pick` do commit específico do fix (`79d22f9`, não o merge commit) direto em `prod` — só esse commit, não o restante do que já estava em `main`/`dev` no momento, que é exatamente o ponto de usar cherry-pick em vez de merge aqui: um hotfix crítico não deveria carregar de carona outras mudanças ainda não validadas em produção.
+5. Tag `v1.0.1` sobre o commit cherry-picked em `prod`, com [GitHub Release](https://github.com/Narvaal/SRMCreditEngine/releases/tag/v1.0.1) explicando o cenário.
+
+CI verde em `prod` depois do cherry-pick, confirmando que o hotfix isolado builda e sobe sozinho (sem depender do resto de `main`).
+
 ---
 
 ## Pendências (retomar na próxima sessão)
@@ -219,8 +233,8 @@ Levantamento original feito ao final do dia 2026-07-03, revisando `CLAUDE.md` (e
 - Dashboard do Grafana com painéis reais — hoje só o datasource do Prometheus está provisionado (`infra/grafana/provisioning/dashboards/` ainda vazio).
 - UI de estorno no Grid de Transações — hoje o endpoint existe (`POST /api/liquidacoes/{id}/estorno`) mas só é acionável via API/Swagger, não tem botão na tela.
 - Cadastro de cedente direto no Painel do Operador — hoje o formulário só seleciona um cedente já existente (criado via API).
-- README: seção explícita justificando a estratégia de branching escolhida (`dev`/`prod`/`main`) — já praticamos o fluxo, mas falta documentar o "porquê" formalmente (é pedido explícito do nível Especialista, mas é barato de adicionar e reforça a maturidade de Git do Sênior).
+- Rodar o frontend como não-root também (`frontend/Dockerfile`) — pendente porque bind de porta <1024 exige root ou uma mudança de porta/`nginx.conf`/`docker-compose.yml`, mais invasivo que o hotfix do backend (`S9` em `docs/criterios-aceite.md`, parte frontend ainda em aberto).
 
 ### Recapitulando o que já está pronto
 
-Passos 1–11 concluídos: entendimento do domínio → stack/estrutura/git workflow → modelo de dados (ER+DDL) → `docker-compose` (Postgres+Prometheus+Grafana) → camada de aplicação completa (Strategy Pattern, Optimistic Locking, exceções, relatório 2 camadas) → frontend (Painel do Operador com simulação em tempo real + Grid de Transações) → CI/CD (GitHub Actions, 3 jobs) + frontend containerizado no compose → logs estruturados (ECS) com correlation id por requisição → cobertura de testes completa (backend + frontend) → diagrama C4 e critérios de aceite documentados → primeiro release (`dev → main`, tag `v1.0.0`). Aplicação sobe com 1 comando (`docker compose up -d --build`), 5 containers, testada de ponta a ponta manualmente e via CI real no GitHub.
+Passos 1–12 concluídos: entendimento do domínio → stack/estrutura/git workflow → modelo de dados (ER+DDL) → `docker-compose` (Postgres+Prometheus+Grafana) → camada de aplicação completa (Strategy Pattern, Optimistic Locking, exceções, relatório 2 camadas) → frontend (Painel do Operador com simulação em tempo real + Grid de Transações) → CI/CD (GitHub Actions, 3 jobs) + frontend containerizado no compose → logs estruturados (ECS) com correlation id por requisição → cobertura de testes completa (backend + frontend) → diagrama C4 e critérios de aceite documentados → primeiro release (`dev → main`, tag `v1.0.0`) → simulação de gestão de crise (`git cherry-pick` de hotfix pra `prod`, tag `v1.0.1`). Aplicação sobe com 1 comando (`docker compose up -d --build`), 5 containers, testada de ponta a ponta manualmente e via CI real no GitHub.

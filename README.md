@@ -47,6 +47,7 @@ docker-compose.yml → orquestra Frontend + API + PostgreSQL + Prometheus + Graf
 - [x] Cobertura de testes completa: services de negócio, controllers (`@WebMvcTest`), relatório (Testcontainers), exception handler no backend; hooks orquestradores e componentes de composição no frontend — ver `ROADMAP.md`
 - [x] Diagrama C4 (Nível 1 e 2) e critérios de aceite documentados (usabilidade, segurança, desempenho, escalabilidade) — ver [`docs/diagrama-c4.md`](./docs/diagrama-c4.md) e [`docs/criterios-aceite.md`](./docs/criterios-aceite.md)
 - [x] Primeiro release: PR `dev → main` + tag semântica [`v1.0.0`](https://github.com/Narvaal/SRMCreditEngine/releases/tag/v1.0.0)
+- [x] Simulação de gestão de crise: hotfix (`backend/Dockerfile` não-root) `git cherry-pick` de `main` pra `prod`, tag [`v1.0.1`](https://github.com/Narvaal/SRMCreditEngine/releases/tag/v1.0.1) — ver "Estratégia de branching" abaixo e `ROADMAP.md`
 
 ## Como rodar (stack completa: API + banco + observabilidade)
 
@@ -122,6 +123,14 @@ Duas telas: **Painel do Operador** (`/painel`) — cadastra e liquida um recebí
 ## CI/CD
 
 `.github/workflows/ci.yml` — dispara em push/PR para `dev`/`main`/`prod` (e manualmente). 3 jobs: `backend` (`spotlessCheck` + `./gradlew build`, incluindo o teste de integração de concorrência com Testcontainers), `frontend` (`lint` + `build` + `test`), e `docker-compose-smoke-test` (sobe a stack completa via `docker compose up -d --build` e valida que API e frontend respondem de verdade, não só que cada lado builda isolado).
+
+## Estratégia de branching
+
+Três branches, papéis diferentes — nenhum deploy automatizado existe hoje atrás de nenhuma delas (o CI acima só valida, não publica em lugar nenhum):
+
+- **`dev`** — branch de trabalho. Todo o desenvolvimento acontece aqui, com Conventional Commits atômicos.
+- **`main`** — branch de release. Recebe `dev` via Pull Request quando há um incremento coeso pronto pra virar versão (ex.: [PR #1](https://github.com/Narvaal/SRMCreditEngine/pull/1), a primeira entrega completa). Cada promoção relevante ganha uma tag semântica (`v1.0.0`, ...).
+- **`prod`** — existe especificamente pra demonstrar o exercício de gestão de crise pedido no nível Especialista do desafio (`CLAUDE.md`, seção 6: simular um bug crítico e reagir com `git revert` seguro ou `git cherry-pick` de hotfix). Não representa um ambiente real rodando em produção — é um exercício de processo, documentado como tal (ver `ROADMAP.md`, Passo 12, pra um caso real de hotfix cherry-picked de `main` pra `prod`, `v1.0.1`).
 
 ## Documentação
 
