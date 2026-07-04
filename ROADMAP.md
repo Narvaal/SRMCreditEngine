@@ -212,6 +212,19 @@ Depois do primeiro release, ficou a dúvida de qual seria a utilidade real da br
 
 CI verde em `prod` depois do cherry-pick, confirmando que o hotfix isolado builda e sobe sozinho (sem depender do resto de `main`).
 
+### Passo 13 — Resiliência: retry + circuit breaker (Resilience4j) _(concluído)_
+
+Fecha o último requisito explícito do nível Sênior. O problema registrado na pendência era a falta de "alvo": nenhuma chamada HTTP externa existia pra proteger. Solução: uma integração externa **simulada mas com HTTP de verdade** — `MockFxProviderController` (`/mock/fx-provider`, fora do `/api` de propósito) faz o papel do BACEN/B3/FX provider, com knob de falha ajustável em runtime (`PUT /config?failureRate=`) e contador de chamadas (`GET /stats`) que permite asserção determinística de que o retry aconteceu.
+
+**Decisões:**
+- **Mock interno, não WireMock/container novo**: funciona igual no `bootRun`, no compose e no CI, zero orquestração extra — o custo de um 6º container não compra nada aqui, já que o ponto é proteger uma chamada HTTP, não simular rede entre containers.
+- **Tradução de falha no service, não `fallbackMethod` via AOP**: `FxProviderClient` tem só `@Retry` + `@CircuitBreaker` (retry por fora, cada tentativa conta na janela do circuito; `CallNotPermittedException` no ignore-list do retry ⇒ circuito aberto falha rápido). Quem traduz pra `ProviderIndisponivelException` (novo 503) é `SincronizacaoTaxasService`, com try/catch explícito — mesmo padrão de tradução do resto do projeto (Optimistic Locking, documento duplicado).
+- **Fallback com semântica de negócio real, não valor inventado**: provider fora ⇒ só a *atualização* de taxas degrada; liquidação e simulação seguem com a última taxa vigente persistida — exatamente o que o histórico append-only de `taxa_cambio`/`taxa_mercado` já garante. Resiliência de verdade, não anotação decorativa.
+- **Sync deliberadamente não-atômico entre as 4 taxas**: cada cotação é uma observação independente no histórico; prender a conexão de banco durante retry/backoff HTTP seria pior que um sync parcial (documentado no javadoc do service).
+- **Trigger duplo**: `POST /api/taxas/sincronizar` (demoável via Swagger) + `@Scheduled` default off (`FX_PROVIDER_SYNC_ENABLED`), ligado no `docker-compose` pra manter o circuito ciclando e visível nas métricas.
+
+**Validado nos dois níveis**: `FxProviderResilienceIT` (Testcontainers + `DEFINED_PORT`, roda no CI — verde na primeira execução) prova retry (3 chamadas HTTP no contador), short-circuit (0 chamadas com circuito aberto) e degradação graciosa (liquidação com a última taxa persistida enquanto o provider está fora). Manualmente contra o `docker-compose`: ciclo completo **closed → open → half-open → closed** observado em `resilience4j_circuitbreaker_state` no `/actuator/prometheus`, incluindo o detalhe de que o `half_open` exige 2 chamadas boas (`permitted-number-of-calls-in-half-open-state`) antes de fechar.
+
 ---
 
 ## Pendências (retomar na próxima sessão)
@@ -220,8 +233,10 @@ Levantamento original feito ao final do dia 2026-07-03, revisando `CLAUDE.md` (e
 
 ### Requisitos explícitos do desafio ainda em aberto (nível Sênior)
 
+Nenhum — todos os requisitos explícitos do nível Sênior foram fechados (o último, Resiliência, no Passo 13).
+
 - **Interactive Rebase**: ~~usamos Conventional Commits em commits atômicos o tempo todo, mas ainda não demonstramos organizar/squashar commits via `git rebase -i` antes de um merge~~ — **feito**: os 7 commits de teste do backend (ver "Cobertura de testes" abaixo) foram commitados fora de ordem de propósito e reorganizados via `git rebase -i` numa sequência lógica (núcleo transacional → services de domínio → cross-cutting) antes do push.
-- **Resiliência (retry/circuit breaker)**: o sistema hoje não tem nenhuma chamada HTTP externa de verdade pra proteger — taxas de câmbio/mercado são só `POST` manual (mockado). Vale avaliar se simulamos uma integração externa de verdade (ex.: um client mockado tipo "BACEN/FX provider") só pra ter algo real onde aplicar Resilience4j, já que sem uma chamada externa esse requisito fica sem "alvo".
+- **Resiliência (retry/circuit breaker)**: ~~o sistema hoje não tem nenhuma chamada HTTP externa de verdade pra proteger~~ — **feito** (Passo 13): integração simulada com HTTP real + Resilience4j, validada no CI e manualmente com o ciclo completo do circuito.
 
 ### Cobertura de testes _(concluído — ver Passo 9)_
 
@@ -237,4 +252,4 @@ Levantamento original feito ao final do dia 2026-07-03, revisando `CLAUDE.md` (e
 
 ### Recapitulando o que já está pronto
 
-Passos 1–12 concluídos: entendimento do domínio → stack/estrutura/git workflow → modelo de dados (ER+DDL) → `docker-compose` (Postgres+Prometheus+Grafana) → camada de aplicação completa (Strategy Pattern, Optimistic Locking, exceções, relatório 2 camadas) → frontend (Painel do Operador com simulação em tempo real + Grid de Transações) → CI/CD (GitHub Actions, 3 jobs) + frontend containerizado no compose → logs estruturados (ECS) com correlation id por requisição → cobertura de testes completa (backend + frontend) → diagrama C4 e critérios de aceite documentados → primeiro release (`dev → main`, tag `v1.0.0`) → simulação de gestão de crise (`git cherry-pick` de hotfix pra `prod`, tag `v1.0.1`). Aplicação sobe com 1 comando (`docker compose up -d --build`), 5 containers, testada de ponta a ponta manualmente e via CI real no GitHub.
+Passos 1–13 concluídos: entendimento do domínio → stack/estrutura/git workflow → modelo de dados (ER+DDL) → `docker-compose` (Postgres+Prometheus+Grafana) → camada de aplicação completa (Strategy Pattern, Optimistic Locking, exceções, relatório 2 camadas) → frontend (Painel do Operador com simulação em tempo real + Grid de Transações) → CI/CD (GitHub Actions, 3 jobs) + frontend containerizado no compose → logs estruturados (ECS) com correlation id por requisição → cobertura de testes completa (backend + frontend) → diagrama C4 e critérios de aceite documentados → primeiro release (`dev → main`, tag `v1.0.0`) → simulação de gestão de crise (`git cherry-pick` de hotfix pra `prod`, tag `v1.0.1`) → resiliência com Resilience4j (retry + circuit breaker sobre integração externa simulada). **Todos os requisitos explícitos do nível Sênior estão fechados.** Aplicação sobe com 1 comando (`docker compose up -d --build`), 5 containers, testada de ponta a ponta manualmente e via CI real no GitHub.
