@@ -27,6 +27,7 @@ import java.math.BigDecimal;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,6 +37,7 @@ import org.springframework.transaction.annotation.Transactional;
  * método público aqui é uma unidade atômica: ou tudo (débito de caixa, mudança de status, inserção
  * no ledger) acontece, ou nada acontece.
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class LiquidacaoService {
@@ -129,7 +131,14 @@ public class LiquidacaoService {
             .valorLiquido(valorLiquido)
             .build();
 
-    return liquidacaoRepository.save(liquidacao);
+    Liquidacao salva = liquidacaoRepository.save(liquidacao);
+    log.atInfo()
+        .setMessage("Liquidação concluída")
+        .addKeyValue("recebivelId", recebivelId)
+        .addKeyValue("moedaPagamento", moedaPagamentoCodigo)
+        .addKeyValue("valorLiquido", valorLiquido)
+        .log();
+    return salva;
   }
 
   @Transactional
@@ -186,7 +195,13 @@ public class LiquidacaoService {
             .valorLiquido(original.getValorLiquido())
             .build();
 
-    return liquidacaoRepository.save(estorno);
+    Liquidacao salvo = liquidacaoRepository.save(estorno);
+    log.atInfo()
+        .setMessage("Estorno concluído")
+        .addKeyValue("liquidacaoOriginalId", liquidacaoOriginalId)
+        .addKeyValue("valorDevolvido", original.getValorLiquido())
+        .log();
+    return salvo;
   }
 
   private Moeda buscarMoeda(String codigo) {

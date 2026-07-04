@@ -8,6 +8,7 @@ import com.srmasset.creditengine.dto.response.LoteLiquidacaoResponse;
 import com.srmasset.creditengine.exception.NegocioException;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 /**
@@ -21,6 +22,7 @@ import org.springframework.stereotype.Service;
  * {@code FALHA} no resultado — reenviar aquele item específico depois é seguro e trivial (o
  * recebível continua {@code PENDENTE}).
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class LiquidacaoBatchService {
@@ -30,7 +32,14 @@ public class LiquidacaoBatchService {
 
   public LoteLiquidacaoResponse processarLote(List<RecebivelRequest> itens) {
     List<LiquidacaoItemResultado> resultados = itens.stream().map(this::processarItem).toList();
-    return LoteLiquidacaoResponse.de(resultados);
+    LoteLiquidacaoResponse resposta = LoteLiquidacaoResponse.de(resultados);
+    log.atInfo()
+        .setMessage("Lote processado")
+        .addKeyValue("totalItens", resposta.totalItens())
+        .addKeyValue("totalSucesso", resposta.totalSucesso())
+        .addKeyValue("totalFalha", resposta.totalFalha())
+        .log();
+    return resposta;
   }
 
   private LiquidacaoItemResultado processarItem(RecebivelRequest request) {
