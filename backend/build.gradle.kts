@@ -42,6 +42,11 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("io.micrometer:micrometer-registry-prometheus")
 
+    // --- Resiliência (retry + circuit breaker na integração com o provider de taxas) ---
+    // starter-aop é pré-requisito das anotações @Retry/@CircuitBreaker (proxy AspectJ).
+    implementation("io.github.resilience4j:resilience4j-spring-boot3:2.3.0")
+    implementation("org.springframework.boot:spring-boot-starter-aop")
+
     // --- Boilerplate ---
     compileOnly("org.projectlombok:lombok")
     annotationProcessor("org.projectlombok:lombok")
