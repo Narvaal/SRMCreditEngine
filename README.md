@@ -1,11 +1,13 @@
 # SRM Credit Engine
 
 [![CI](https://github.com/Narvaal/SRMCreditEngine/actions/workflows/ci.yml/badge.svg)](https://github.com/Narvaal/SRMCreditEngine/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/Narvaal/SRMCreditEngine)](https://github.com/Narvaal/SRMCreditEngine/releases/tag/v1.0.0)
+[![Release](https://img.shields.io/github/v/release/Narvaal/SRMCreditEngine)](https://github.com/Narvaal/SRMCreditEngine/releases/latest)
 
 Plataforma de cessão de crédito multimoedas. Recebe lotes de recebíveis (duplicatas, cheques pré-datados, etc.), calcula o deságio de cada um com base no risco do ativo e na moeda de liquidação, e registra a liquidação de forma auditável.
 
 Desenvolvido como desafio técnico, nível **Sênior** (foco em Observabilidade, Escalabilidade e Automação). O raciocínio de negócio, decisões de domínio e progresso técnico são documentados em [`ROADMAP.md`](./ROADMAP.md); o uso de IA no desenvolvimento é documentado em [`AI_USAGE.md`](./AI_USAGE.md); o enunciado completo do desafio está em [`CLAUDE.md`](./CLAUDE.md).
+
+> **Escopo**: os itens do nível Especialista (ADRs, design para 1 milhão de tx/minuto, IaC, proposta EDA) estão deliberadamente fora desta entrega — com duas exceções incorporadas por serem baratas e complementares ao fluxo Sênior: a estratégia de branching justificada (seção abaixo) e a simulação de gestão de crise com `git cherry-pick` (`ROADMAP.md`, Passo 12).
 
 ## Stack
 
@@ -15,9 +17,22 @@ Desenvolvido como desafio técnico, nível **Sênior** (foco em Observabilidade,
 | Banco de dados | PostgreSQL, migrations com Flyway |
 | Documentação de API | OpenAPI/Swagger (springdoc) |
 | Observabilidade | Spring Boot Actuator + Micrometer → Prometheus → Grafana; logs estruturados (JSON, formato ECS) com correlation id por requisição |
+| Resiliência | Resilience4j (retry + circuit breaker) na integração externa de taxas |
 | Testes (backend) | JUnit 5, Testcontainers (Postgres) |
 | Frontend | TypeScript + React + Vite, Tailwind CSS v4, TanStack Query, React Router, React Hook Form + Zod |
 | Testes (frontend) | Vitest + Testing Library |
+
+### Fundamentação teórica (por que esta stack)
+
+Cada escolha amarrada ao problema — um motor financeiro multimoedas, onde precisão decimal, atomicidade e concorrência são domínio, não detalhe:
+
+- **Java 21 + Spring Boot 3.5**: o desafio pede tipagem forte e frameworks maduros pra ambiente financeiro — Java entrega os dois com o ecossistema mais testado do mercado bancário. Os quatro pilares do domínio são recursos de primeira classe da plataforma, não bibliotecas coladas: `BigDecimal` pra aritmética decimal exata, `@Transactional` com semântica ACID real, Bean Validation na borda da API, e Optimistic Locking (`@Version`) de série no JPA. Spring Boot 3.5 ainda traz logging estruturado nativo e Micrometer/Prometheus sem código extra.
+- **`ch.obermuhlner:big-math`**: a fórmula de valor presente tem expoente fracionário (prazo em meses) e o `BigDecimal.pow()` nativo só aceita expoente inteiro — cair pra `double` quebraria a precisão que é requisito. big-math resolve potência fracionária inteiramente em `BigDecimal`; a dependência fica isolada num único ponto (`MotorPrecificacao`).
+- **PostgreSQL + Flyway**: banco relacional era pedido explícito; Postgres soma `NUMERIC` com precisão/escala exatas por coluna (documentadas no diagrama ER), constraints ricas (CHECK, UNIQUE compostas) que fazem o banco defender invariantes de negócio, e MVCC que casa com o Optimistic Locking da aplicação. Flyway versiona o schema como código — as migrations são a fonte de verdade do DDL.
+- **Gradle (Kotlin DSL)**: build script tipado e conciso; wrapper commitado garante build reprodutível no CI.
+- **React 19 + TypeScript + Vite**: TypeScript espelha os DTOs do backend em tipos (`frontend/src/api/types.ts`), pegando drift de contrato em compile-time; React pela maturidade/ecossistema; Vite por dev-server com HMR instantâneo e build enxuto.
+- **TanStack Query + React Hook Form + Zod, sem Redux**: a resposta ao "gerenciamento de estado global, se necessário" do enunciado foi *não é necessário* — três fontes de verdade bem delimitadas (dados de servidor no React Query, formulário no RHF, filtros/paginação na URL) eliminam o store global. Zod valida na borda do frontend com o mesmo espírito do Bean Validation no backend.
+- **Monorepo**: 1 repositório público (como pede a entrega), 1 pipeline de CI orquestrando os dois lados, e histórico correlacionando mudanças de API com mudanças de UI.
 
 ## Estrutura do repositório
 
@@ -92,7 +107,7 @@ export DB_PASSWORD=srm
 ./gradlew bootRun   # sobe a aplicação em http://localhost:8080, aplicando as migrations automaticamente
 ```
 
-> `./gradlew test` inclui um teste de integração de concorrência (`LiquidacaoConcorrenciaIT`) que sobe um Postgres descartável via Testcontainers — requer Docker com API ≥ 1.40. Em ambientes com Docker Engine muito recente, o probe de compatibilidade do Testcontainers 1.21.x pode falhar na inicialização (não é um bug do teste); o mesmo cenário pode ser validado manualmente disparando dois `POST /api/recebiveis/lote` concorrentes contra a mesma moeda.
+> `./gradlew test` inclui 3 testes de integração (`*IT`: concorrência com Optimistic Locking, relatório com SQL nativo e resiliência do circuit breaker) que sobem um Postgres descartável via Testcontainers. Em ambientes com Docker Engine muito recente, o probe de compatibilidade do Testcontainers 1.21.x pode falhar na inicialização (não é um bug dos testes — eles rodam no CI). Por isso o hook de pre-push roda só os testes de unidade/slice (`--tests '*Test'`), deixando os `*IT` para o CI — um hook que sempre falha viraria um hook sempre pulado.
 
 ## Principais endpoints
 
