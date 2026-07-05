@@ -7,9 +7,9 @@ import jakarta.validation.constraints.Size;
 
 public record CedenteRequest(
     @NotBlank
-        @Size(min = 3, max = 20, message = "A razão social deve ter entre 3 e 20 caracteres")
+        @Size(min = 3, max = 20, message = "Informe uma razão social de 3 a 20 caracteres.")
         @Pattern(
             regexp = "[\\p{L}\\p{N} ]+",
-            message = "A razão social não pode conter caracteres especiais")
+            message = "Use apenas letras, números e espaços na razão social.")
         String nome,
     @NotBlank @DocumentoValido String documento) {}

@@ -65,10 +65,9 @@ describe('RecebivelForm', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /liquidar recebível/i }))
 
-    expect(await screen.findByText('Selecione um cedente')).toBeInTheDocument()
-    // valorFace vazio coage pra 0 via z.coerce.number — cai na validação .positive(), não na de tipo.
-    expect(screen.getByText('O valor deve ser maior que zero')).toBeInTheDocument()
-    expect(screen.getByText('Informe o vencimento')).toBeInTheDocument()
+    expect(await screen.findByText('Selecione um cedente.')).toBeInTheDocument()
+    expect(screen.getByText('Informe um valor.')).toBeInTheDocument()
+    expect(screen.getByText('Informe o vencimento.')).toBeInTheDocument()
     expect(onValid).not.toHaveBeenCalled()
   })
 

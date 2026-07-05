@@ -94,7 +94,7 @@ describe('PainelOperadorPage', () => {
 
     await user.click(screen.getByRole('button', { name: /cadastrar novo cedente/i }))
     await user.type(screen.getByLabelText('Nome'), 'Nova Empresa SA')
-    await user.type(screen.getByLabelText('Documento CPF/CNPJ'), '52998224725')
+    await user.type(screen.getByLabelText('Documento'), '52998224725')
     await user.click(screen.getByRole('button', { name: 'Cadastrar' }))
 
     // catálogo re-buscado com o novo cedente, e o select já vem com ele selecionado

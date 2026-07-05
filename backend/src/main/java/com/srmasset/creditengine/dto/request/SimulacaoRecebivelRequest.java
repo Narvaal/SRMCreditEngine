@@ -17,11 +17,10 @@ public record SimulacaoRecebivelRequest(
     @NotBlank String tipoRecebivelCodigo,
     @NotNull
         @Positive
-        @DecimalMax(value = "1000000000000000.00", message = "O valor máximo é 1 quadrilhão")
-        @Digits(
-            integer = 16,
-            fraction = 2,
-            message = "O valor deve ter no máximo 16 dígitos inteiros e 2 decimais")
+        @DecimalMax(
+            value = "1000000000000000.00",
+            message = "Informe um valor de até 1 quadrilhão.")
+        @Digits(integer = 16, fraction = 2, message = "Informe um valor com até 2 casas decimais.")
         BigDecimal valorFace,
     @NotBlank String moedaTitulo,
     @NotNull @Future LocalDate dataVencimento,

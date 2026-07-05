@@ -60,11 +60,11 @@ describe('validarDocumento', () => {
 
 describe('mensagemErroDocumento', () => {
   it('nomeia CPF quando há exatamente 11 dígitos', () => {
-    expect(mensagemErroDocumento('529.982.247-26')).toBe('CPF inválido.')
+    expect(mensagemErroDocumento('529.982.247-26')).toBe('Informe um CPF válido.')
   })
 
   it('nomeia CNPJ quando há exatamente 14 dígitos', () => {
-    expect(mensagemErroDocumento('11.444.777/0001-62')).toBe('CNPJ inválido.')
+    expect(mensagemErroDocumento('11.444.777/0001-62')).toBe('Informe um CNPJ válido.')
   })
 
   it('usa mensagem genérica para tamanhos incompletos', () => {
@@ -85,18 +85,18 @@ describe('validarRazaoSocial', () => {
   })
 
   it('rejeita nomes muito curtos ou muito longos', () => {
-    expect(validarRazaoSocial('ab')).toBe('A razão social deve ter entre 3 e 20 caracteres.')
+    expect(validarRazaoSocial('ab')).toBe('Informe uma razão social de 3 a 20 caracteres.')
     expect(validarRazaoSocial('Uma razão social grande demais')).toBe(
-      'A razão social deve ter entre 3 e 20 caracteres.',
+      'Informe uma razão social de 3 a 20 caracteres.',
     )
   })
 
   it('rejeita caracteres especiais', () => {
-    expect(validarRazaoSocial('Empresa & Cia')).toBe('A razão social não pode conter caracteres especiais.')
-    expect(validarRazaoSocial('a.a.a')).toBe('A razão social não pode conter caracteres especiais.')
+    expect(validarRazaoSocial('Empresa & Cia')).toBe('Use apenas letras, números e espaços na razão social.')
+    expect(validarRazaoSocial('a.a.a')).toBe('Use apenas letras, números e espaços na razão social.')
   })
 
   it('mede o tamanho após o trim', () => {
-    expect(validarRazaoSocial('  ab  ')).toBe('A razão social deve ter entre 3 e 20 caracteres.')
+    expect(validarRazaoSocial('  ab  ')).toBe('Informe uma razão social de 3 a 20 caracteres.')
   })
 })

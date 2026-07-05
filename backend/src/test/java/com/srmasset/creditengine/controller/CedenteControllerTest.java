@@ -86,8 +86,7 @@ class CedenteControllerTest {
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.camposInvalidos[0].campo").value("documento"))
         .andExpect(
-            jsonPath("$.camposInvalidos[0].mensagem")
-                .value("Documento deve ser um CPF ou CNPJ válido"));
+            jsonPath("$.camposInvalidos[0].mensagem").value("Informe um CPF ou CNPJ válido."));
   }
 
   @Test

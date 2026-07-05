@@ -25,23 +25,38 @@ export function vencimentoMaximoYYYYMMDD(): string {
   return dataLocalYYYYMMDD(limite)
 }
 
+// Mensagens sempre no imperativo ("Informe...", "Selecione...", "Use...") — padrão do produto.
 export const recebivelFormSchema = z.object({
-  cedenteId: z.string().min(1, 'Selecione um cedente'),
-  tipoRecebivelCodigo: z.string().min(1, 'Selecione o tipo'),
-  valorFace: z.coerce
-    .number({ message: 'Informe um valor' })
-    .positive('O valor deve ser maior que zero')
-    .lte(VALOR_FACE_MAXIMO, 'O valor máximo é 1 quadrilhão.'),
+  cedenteId: z.string().min(1, 'Selecione um cedente.'),
+  tipoRecebivelCodigo: z.string().min(1, 'Selecione um tipo de recebível.'),
+  // As casas decimais são validadas na STRING digitada, antes de virar number — depois da
+  // conversão, "500,0000000000000012" já colapsou pra exatamente 500 no float e o erro some.
+  valorFace: z
+    .union([z.string(), z.number()], { message: 'Informe um valor.' })
+    .transform(String)
+    .pipe(
+      z
+        .string()
+        .min(1, 'Informe um valor.')
+        .regex(/^-?\d+([.,]\d{1,2})?$/, 'Informe um valor com até 2 casas decimais.'),
+    )
+    .transform((valor) => Number(valor.replace(',', '.')))
+    .pipe(
+      z
+        .number()
+        .positive('Informe um valor maior que 0.')
+        .lte(VALOR_FACE_MAXIMO, 'Informe um valor de até 1 quadrilhão.'),
+    ),
   dataVencimento: z
     .string()
-    .min(1, 'Informe o vencimento')
-    .refine(dataFutura, 'O vencimento deve ser uma data futura.')
+    .min(1, 'Informe o vencimento.')
+    .refine(dataFutura, 'Informe uma data futura.')
     .refine(
       (data) => data <= vencimentoMaximoYYYYMMDD(),
-      `O vencimento não pode passar de ${VENCIMENTO_HORIZONTE_ANOS} anos.`,
+      `Informe uma data de no máximo ${VENCIMENTO_HORIZONTE_ANOS} anos à frente.`,
     ),
-  moedaTitulo: z.string().min(1, 'Selecione a moeda do título'),
-  moedaPagamento: z.string().min(1, 'Selecione a moeda de pagamento'),
+  moedaTitulo: z.string().min(1, 'Selecione a moeda do título.'),
+  moedaPagamento: z.string().min(1, 'Selecione a moeda de pagamento.'),
 })
 
 export type RecebivelFormInput = z.input<typeof recebivelFormSchema>

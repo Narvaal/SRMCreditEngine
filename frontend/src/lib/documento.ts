@@ -63,8 +63,8 @@ export function validarDocumento(valor: string): 'cpf' | 'cnpj' | null {
  */
 export function mensagemErroDocumento(valor: string): string {
   const digitos = documentoSomenteDigitos(valor)
-  if (digitos.length === 11) return 'CPF inválido.'
-  if (digitos.length === 14) return 'CNPJ inválido.'
+  if (digitos.length === 11) return 'Informe um CPF válido.'
+  if (digitos.length === 14) return 'Informe um CNPJ válido.'
   return 'Informe um CPF ou CNPJ válido.'
 }
 
@@ -74,10 +74,10 @@ const RAZAO_SOCIAL_CARACTERES_PERMITIDOS = /^[\p{L}\p{N} ]+$/u
 export function validarRazaoSocial(valor: string): string | null {
   const nome = valor.trim()
   if (nome.length < 3 || nome.length > 20) {
-    return 'A razão social deve ter entre 3 e 20 caracteres.'
+    return 'Informe uma razão social de 3 a 20 caracteres.'
   }
   if (!RAZAO_SOCIAL_CARACTERES_PERMITIDOS.test(nome)) {
-    return 'A razão social não pode conter caracteres especiais.'
+    return 'Use apenas letras, números e espaços na razão social.'
   }
   return null
 }

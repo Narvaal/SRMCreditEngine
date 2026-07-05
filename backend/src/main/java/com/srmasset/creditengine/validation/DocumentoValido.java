@@ -18,7 +18,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface DocumentoValido {
 
-  String message() default "Documento deve ser um CPF ou CNPJ válido";
+  String message() default "Informe um CPF ou CNPJ válido.";
 
   Class<?>[] groups() default {};
 

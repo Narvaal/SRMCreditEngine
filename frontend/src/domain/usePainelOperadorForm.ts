@@ -40,12 +40,12 @@ export function usePainelOperadorForm() {
   const camposObservados = form.watch(CAMPOS_PRECIFICACAO)
   const camposComAtraso = useDebouncedValue(camposObservados, DEBOUNCE_MS)
 
-  const { requestSimulacao, simulacaoComErro } = useMemo(() => {
+  const { requestSimulacao, camposComFalha } = useMemo(() => {
     const [tipoRecebivelCodigo, valorFace, dataVencimento, moedaTitulo, moedaPagamento] = camposComAtraso
     const valores = { tipoRecebivelCodigo, valorFace, dataVencimento, moedaTitulo, moedaPagamento }
     const resultado = camposPrecificacaoSchema.safeParse(valores)
     if (resultado.success) {
-      return { requestSimulacao: resultado.data, simulacaoComErro: false }
+      return { requestSimulacao: resultado.data, camposComFalha: [] as string[] }
     }
     // Campo vazio é formulário incompleto ("preencha..."); campo preenchido que falhou é erro
     // de verdade — o painel de resultado avisa em vez de fingir que só falta preencher.
@@ -53,9 +53,14 @@ export function usePainelOperadorForm() {
       const valor = valores[campo as keyof typeof valores]
       return valor !== undefined && valor !== null && String(valor) !== ''
     }
-    const comErro = resultado.error.issues.some((issue) => campoPreenchido(String(issue.path[0])))
-    return { requestSimulacao: null, simulacaoComErro: comErro }
+    const falhas = resultado.error.issues.map((issue) => String(issue.path[0])).filter(campoPreenchido)
+    return { requestSimulacao: null, camposComFalha: falhas }
   }, [camposComAtraso])
+
+  // O aviso do painel só acompanha erros que o operador já está vendo no campo (onTouched) —
+  // sem isso ele apareceria antes do destaque, apontando pra um erro ainda invisível.
+  const { errors } = form.formState
+  const simulacaoComErro = camposComFalha.some((campo) => campo in errors)
 
   const simulacao = useSimulacaoRecebivel(requestSimulacao)
 

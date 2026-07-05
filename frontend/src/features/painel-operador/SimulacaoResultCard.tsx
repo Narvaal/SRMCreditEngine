@@ -17,13 +17,9 @@ export function SimulacaoResultCard({ dados, carregando, erro, pronto, comErro }
   if (!pronto) {
     return (
       <Card className="flex min-h-48 items-center justify-center text-center text-sm text-ink-faint">
-        {comErro ? (
-          <span className="text-danger">
-            Corrija os dados destacados no formulário para ver o valor líquido.
-          </span>
-        ) : (
-          'Preencha os dados do recebível para ver o valor líquido calculado em tempo real.'
-        )}
+        {comErro
+          ? 'Corrija os dados destacados no formulário para ver o valor líquido.'
+          : 'Preencha os dados do recebível para ver o valor líquido calculado em tempo real.'}
       </Card>
     )
   }

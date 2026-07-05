@@ -120,6 +120,38 @@ describe('usePainelOperadorForm', () => {
     expect(result.current.form.getValues('tipoRecebivelCodigo')).toBe('DUPLICATA_MERCANTIL')
   })
 
+  it('campo preenchido com valor inválido marca simulacaoComErro (≠ formulário incompleto)', async () => {
+    vi.useFakeTimers()
+    const { result } = renderHook(() => usePainelOperadorForm(), { wrapper })
+
+    // formulário vazio: incompleto, não é erro
+    act(() => {
+      vi.advanceTimersByTime(450)
+    })
+    expect(result.current.simulacaoComErro).toBe(false)
+
+    preencherCamposPrecificacao(result.current.form)
+    act(() => {
+      result.current.form.setValue('valorFace', 500000.032 as never)
+    })
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(450)
+    })
+
+    // o valor já é inválido, mas o erro ainda não está visível no campo (sem blur/trigger):
+    // o painel não pode avisar antes do destaque aparecer
+    expect(result.current.simulacaoPronta).toBe(false)
+    expect(result.current.simulacaoComErro).toBe(false)
+
+    // simula o blur do campo (onTouched): o erro fica visível e o painel acompanha
+    await act(async () => {
+      await result.current.form.trigger('valorFace')
+    })
+
+    expect(result.current.simulacaoComErro).toBe(true)
+    expect(recebiveisApi.simular).not.toHaveBeenCalled()
+  })
+
   it('só dispara a simulação depois do debounce de 450ms com campos válidos', async () => {
     vi.useFakeTimers()
     vi.mocked(recebiveisApi.simular).mockResolvedValue(SIMULACAO_RESPOSTA)

@@ -46,7 +46,31 @@ describe('camposPrecificacaoSchema', () => {
     const acima = camposPrecificacaoSchema.safeParse({ ...valoresValidos, valorFace: '1000000000000001' })
     expect(acima.success).toBe(false)
     if (!acima.success) {
-      expect(acima.error.issues[0].message).toBe('O valor máximo é 1 quadrilhão.')
+      expect(acima.error.issues[0].message).toBe('Informe um valor de até 1 quadrilhão.')
+    }
+  })
+
+  it('rejeita valorFace com mais de 2 casas decimais com mensagem clara', () => {
+    expect(camposPrecificacaoSchema.safeParse({ ...valoresValidos, valorFace: '500000.03' }).success).toBe(true)
+    expect(camposPrecificacaoSchema.safeParse({ ...valoresValidos, valorFace: '500,03' }).success).toBe(true)
+
+    const tresCasas = camposPrecificacaoSchema.safeParse({ ...valoresValidos, valorFace: '500000.032' })
+    expect(tresCasas.success).toBe(false)
+    if (!tresCasas.success) {
+      expect(tresCasas.error.issues[0].message).toBe('Informe um valor com até 2 casas decimais.')
+    }
+  })
+
+  it('valida as casas decimais na string digitada, não no float — decimais minúsculos não passam', () => {
+    // Number('500.0000000000000012...') colapsa pra exatamente 500 no IEEE-754; a validação
+    // precisa acontecer antes da conversão pra pegar o que o operador realmente digitou.
+    const quaseQuinhentos = camposPrecificacaoSchema.safeParse({
+      ...valoresValidos,
+      valorFace: '500.0000000000000012355464564',
+    })
+    expect(quaseQuinhentos.success).toBe(false)
+    if (!quaseQuinhentos.success) {
+      expect(quaseQuinhentos.error.issues[0].message).toBe('Informe um valor com até 2 casas decimais.')
     }
   })
 
@@ -54,7 +78,7 @@ describe('camposPrecificacaoSchema', () => {
     const alemDoHorizonte = camposPrecificacaoSchema.safeParse({ ...valoresValidos, dataVencimento: '7000-05-01' })
     expect(alemDoHorizonte.success).toBe(false)
     if (!alemDoHorizonte.success) {
-      expect(alemDoHorizonte.error.issues[0].message).toBe('O vencimento não pode passar de 100 anos.')
+      expect(alemDoHorizonte.error.issues[0].message).toBe('Informe uma data de no máximo 100 anos à frente.')
     }
   })
 
@@ -62,7 +86,7 @@ describe('camposPrecificacaoSchema', () => {
     const passado = camposPrecificacaoSchema.safeParse({ ...valoresValidos, dataVencimento: ONTEM })
     expect(passado.success).toBe(false)
     if (!passado.success) {
-      expect(passado.error.issues[0].message).toBe('O vencimento deve ser uma data futura.')
+      expect(passado.error.issues[0].message).toBe('Informe uma data futura.')
     }
 
     expect(camposPrecificacaoSchema.safeParse({ ...valoresValidos, dataVencimento: HOJE }).success).toBe(false)
