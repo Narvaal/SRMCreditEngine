@@ -64,6 +64,7 @@ docker-compose.yml → orquestra Frontend + API + PostgreSQL + Prometheus + Graf
 - [x] Primeiro release: PR `dev → main` + tag semântica [`v1.0.0`](https://github.com/Narvaal/SRMCreditEngine/releases/tag/v1.0.0)
 - [x] Simulação de gestão de crise: hotfix (`backend/Dockerfile` não-root) `git cherry-pick` de `main` pra `prod`, tag [`v1.0.1`](https://github.com/Narvaal/SRMCreditEngine/releases/tag/v1.0.1) — ver "Estratégia de branching" abaixo e `ROADMAP.md`
 - [x] Resiliência: retry + circuit breaker (Resilience4j) na integração com o provider externo de taxas (mockado), com degradação graciosa — ver seção "Resiliência" abaixo e `ROADMAP.md`
+- [x] Estorno pela UI (Grid, com confirmação e flag de já-estornada), cadastro de cedente inline no Painel, e containers 100% não-root (backend + frontend) — ver `ROADMAP.md`, Passo 15
 
 ## Como rodar (stack completa: API + banco + observabilidade)
 
@@ -149,7 +150,7 @@ npm install
 npm run dev   # http://localhost:5173
 ```
 
-Duas telas: **Painel do Operador** (`/painel`) — cadastra e liquida um recebível, com o valor líquido calculado em tempo real conforme o formulário é preenchido — e **Grid de Transações** (`/transacoes`) — histórico paginado com filtros por cedente/moeda/período, refletidos na URL.
+Duas telas: **Painel do Operador** (`/painel`) — cadastra e liquida um recebível, com o valor líquido calculado em tempo real conforme o formulário é preenchido e cadastro de cedente inline (o cedente novo já sai selecionado) — e **Grid de Transações** (`/transacoes`) — histórico paginado com filtros por cedente/moeda/período refletidos na URL, e estorno direto na tabela (com confirmação; liquidações já estornadas ficam marcadas e sem ação).
 
 ## CI/CD
 
