@@ -90,6 +90,8 @@ export interface ExtratoLiquidacaoLinha {
   valorFace: number
   valorLiquido: number
   criadoEm: string
+  /** true quando esta LIQUIDACAO já tem um ESTORNO apontando pra ela — some o botão de estornar. */
+  estornada: boolean
 }
 
 export interface PaginaResponse<T> {

@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import userEvent from '@testing-library/user-event'
+import { describe, expect, it, vi } from 'vitest'
 import type { ExtratoLiquidacaoLinha } from '../../api/types'
 import { TransacoesTable } from './TransacoesTable'
 
@@ -14,24 +15,25 @@ const linhaBase: ExtratoLiquidacaoLinha = {
   valorFace: 1000,
   valorLiquido: 900,
   criadoEm: '2026-07-03T12:00:00Z',
+  estornada: false,
 }
 
 describe('TransacoesTable', () => {
   it('mostra mensagem quando não há linhas', () => {
-    render(<TransacoesTable linhas={[]} />)
+    render(<TransacoesTable linhas={[]} onEstornar={vi.fn()} />)
 
     expect(screen.getByText(/nenhuma transação encontrada/i)).toBeInTheDocument()
   })
 
   it('renderiza uma linha por transação, com o cedente e o tipo', () => {
-    render(<TransacoesTable linhas={[linhaBase]} />)
+    render(<TransacoesTable linhas={[linhaBase]} onEstornar={vi.fn()} />)
 
     expect(screen.getByText('Empresa Teste Ltda')).toBeInTheDocument()
     expect(screen.getByText('LIQUIDACAO')).toBeInTheDocument()
   })
 
   it('diferencia ESTORNO de LIQUIDACAO visualmente (badge)', () => {
-    render(<TransacoesTable linhas={[{ ...linhaBase, id: '2', tipo: 'ESTORNO' }]} />)
+    render(<TransacoesTable linhas={[{ ...linhaBase, id: '2', tipo: 'ESTORNO' }]} onEstornar={vi.fn()} />)
 
     expect(screen.getByText('ESTORNO')).toBeInTheDocument()
   })
@@ -40,16 +42,63 @@ describe('TransacoesTable', () => {
     render(
       <TransacoesTable
         linhas={[{ ...linhaBase, id: '3', moedaTitulo: 'BRL', moedaPagamento: 'USD', valorFace: 10000, valorLiquido: 1742.12 }]}
+        onEstornar={vi.fn()}
       />,
     )
 
-    expect(screen.getByText('—')).toBeInTheDocument()
+    expect(screen.getAllByText('—').length).toBeGreaterThan(0)
     expect(screen.queryByText('82.58%')).not.toBeInTheDocument()
   })
 
   it('calcula deságio % normalmente quando a moeda é a mesma', () => {
-    render(<TransacoesTable linhas={[{ ...linhaBase, id: '4', valorFace: 1000, valorLiquido: 900 }]} />)
+    render(<TransacoesTable linhas={[{ ...linhaBase, id: '4', valorFace: 1000, valorLiquido: 900 }]} onEstornar={vi.fn()} />)
 
     expect(screen.getByText('10.00%')).toBeInTheDocument()
+  })
+
+  it('mostra o botão Estornar só em LIQUIDACAO não-estornada', () => {
+    render(
+      <TransacoesTable
+        linhas={[
+          { ...linhaBase, id: 'liq' },
+          { ...linhaBase, id: 'liq-estornada', estornada: true },
+          { ...linhaBase, id: 'estorno', tipo: 'ESTORNO' },
+        ]}
+        onEstornar={vi.fn()}
+      />,
+    )
+
+    expect(screen.getAllByRole('button', { name: 'Estornar' })).toHaveLength(1)
+    expect(screen.getByText('Estornada')).toBeInTheDocument()
+  })
+
+  it('só chama onEstornar depois da confirmação em dois cliques', async () => {
+    const onEstornar = vi.fn()
+    render(<TransacoesTable linhas={[linhaBase]} onEstornar={onEstornar} />)
+    const user = userEvent.setup()
+
+    await user.click(screen.getByRole('button', { name: 'Estornar' }))
+    expect(onEstornar).not.toHaveBeenCalled()
+
+    await user.click(screen.getByRole('button', { name: 'Confirmar estorno' }))
+    expect(onEstornar).toHaveBeenCalledWith('1')
+  })
+
+  it('cancelar aborta a confirmação sem chamar onEstornar', async () => {
+    const onEstornar = vi.fn()
+    render(<TransacoesTable linhas={[linhaBase]} onEstornar={onEstornar} />)
+    const user = userEvent.setup()
+
+    await user.click(screen.getByRole('button', { name: 'Estornar' }))
+    await user.click(screen.getByRole('button', { name: 'Cancelar' }))
+
+    expect(onEstornar).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: 'Estornar' })).toBeInTheDocument()
+  })
+
+  it('desabilita a ação da linha cujo estorno está em voo', () => {
+    render(<TransacoesTable linhas={[linhaBase]} onEstornar={vi.fn()} estornandoId="1" />)
+
+    expect(screen.getByRole('button', { name: 'Estornando...' })).toBeDisabled()
   })
 })
