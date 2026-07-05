@@ -36,7 +36,7 @@ describe('CadastroCedenteInline', () => {
     await expandirFormulario(user)
 
     expect(screen.getByLabelText('Nome')).toBeInTheDocument()
-    expect(screen.getByLabelText('Documento')).toBeInTheDocument()
+    expect(screen.getByLabelText('Documento CPF/CNPJ')).toBeInTheDocument()
   })
 
   it('aplica a máscara de CPF e de CNPJ conforme a digitação', async () => {
@@ -44,7 +44,7 @@ describe('CadastroCedenteInline', () => {
     const user = userEvent.setup()
 
     await expandirFormulario(user)
-    const campoDocumento = screen.getByLabelText('Documento')
+    const campoDocumento = screen.getByLabelText('Documento CPF/CNPJ')
 
     await user.type(campoDocumento, CPF_VALIDO_DIGITADO)
     expect(campoDocumento).toHaveValue(CPF_VALIDO_MASCARADO)
@@ -72,7 +72,7 @@ describe('CadastroCedenteInline', () => {
 
     await expandirFormulario(user)
     await user.type(screen.getByLabelText('Nome'), 'Nova Ltda')
-    await user.type(screen.getByLabelText('Documento'), '52998224726')
+    await user.type(screen.getByLabelText('Documento CPF/CNPJ'), '52998224726')
     await user.click(screen.getByRole('button', { name: 'Cadastrar' }))
 
     expect(await screen.findByText('CPF inválido.')).toBeInTheDocument()
@@ -85,7 +85,7 @@ describe('CadastroCedenteInline', () => {
 
     await expandirFormulario(user)
     await user.type(screen.getByLabelText('Nome'), 'Nova & Cia')
-    await user.type(screen.getByLabelText('Documento'), CPF_VALIDO_DIGITADO)
+    await user.type(screen.getByLabelText('Documento CPF/CNPJ'), CPF_VALIDO_DIGITADO)
     await user.click(screen.getByRole('button', { name: 'Cadastrar' }))
 
     expect(await screen.findByText(/não pode conter caracteres especiais/i)).toBeInTheDocument()
@@ -104,7 +104,7 @@ describe('CadastroCedenteInline', () => {
 
     await expandirFormulario(user)
     await user.type(screen.getByLabelText('Nome'), 'Nova Ltda')
-    await user.type(screen.getByLabelText('Documento'), CPF_VALIDO_DIGITADO)
+    await user.type(screen.getByLabelText('Documento CPF/CNPJ'), CPF_VALIDO_DIGITADO)
     await user.click(screen.getByRole('button', { name: 'Cadastrar' }))
 
     await waitFor(() => expect(onCriado).toHaveBeenCalledWith('novo-1'))
@@ -129,7 +129,7 @@ describe('CadastroCedenteInline', () => {
 
     await expandirFormulario(user)
     await user.type(screen.getByLabelText('Nome'), 'Nova Ltda')
-    await user.type(screen.getByLabelText('Documento'), CPF_VALIDO_DIGITADO)
+    await user.type(screen.getByLabelText('Documento CPF/CNPJ'), CPF_VALIDO_DIGITADO)
     await user.click(screen.getByRole('button', { name: 'Cadastrar' }))
 
     expect(await screen.findByText(/já existe um cedente cadastrado/i)).toBeInTheDocument()
@@ -153,7 +153,7 @@ describe('CadastroCedenteInline', () => {
 
     await expandirFormulario(user)
     await user.type(screen.getByLabelText('Nome'), 'Nova Ltda')
-    await user.type(screen.getByLabelText('Documento'), CPF_VALIDO_DIGITADO)
+    await user.type(screen.getByLabelText('Documento CPF/CNPJ'), CPF_VALIDO_DIGITADO)
     await user.click(screen.getByRole('button', { name: 'Cadastrar' }))
 
     expect(await screen.findByText('Documento deve ser um CPF ou CNPJ válido')).toBeInTheDocument()

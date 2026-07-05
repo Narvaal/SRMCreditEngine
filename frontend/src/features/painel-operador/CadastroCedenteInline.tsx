@@ -88,11 +88,10 @@ export function CadastroCedenteInline({ onCriado }: CadastroCedenteInlineProps) 
         error={erroNome}
       />
       <Input
-        label="Documento"
+        label="Documento CPF/CNPJ"
         name="novoCedenteDocumento"
         value={documento}
         onChange={(e) => setDocumento(mascararDocumento(e.target.value))}
-        placeholder="000.000.000-00 ou 00.000.000/0000-00"
         inputMode="numeric"
         error={erroDocumento}
       />
