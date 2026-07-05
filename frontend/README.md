@@ -18,4 +18,5 @@ npm run dev      # http://localhost:5173
 | `npm run dev` | Sobe o servidor de desenvolvimento (HMR) |
 | `npm run build` | Type-check (`tsc -b`) + build de produção |
 | `npm run lint` | Lint (oxlint) |
+| `npm test` | Testes (Vitest + Testing Library) |
 | `npm run preview` | Serve o build de produção localmente |

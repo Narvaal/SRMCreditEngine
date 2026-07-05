@@ -154,8 +154,9 @@ Independente da ferramenta de migração (Flyway, Liquibase etc.) ou ORM, fornec
 
 ## Notas para o Claude Code neste repositório
 
-- Repositório está vazio no momento (apenas README inicial) — stack e arquitetura ainda não definidas.
-- Ao decidir a stack, priorizar tipagem forte e precisão decimal (ex.: evitar `float`/`double` para valores monetários — usar tipos decimais exatos).
-- Lembrar de manter `AI_USAGE.md` atualizado conforme o trabalho avança (seção 2).
-- Respeitar o nível de senioridade-alvo definido pelo usuário para escopo de Git workflow e entregáveis (seção 6) — perguntar se não estiver claro.
-- Nenhum commit deve ir direto para `main`; seguir o fluxo de branch definido para o nível escolhido.
+- Nível-alvo: **Sênior**. Todos os requisitos explícitos (Júnior+Pleno+Sênior) estão fechados e auditados — ver `ROADMAP.md` (Passos 1–15) pro histórico e a lista do que resta (nice-to-have).
+- Stack definida: Java 21 + Spring Boot 3.5 (Gradle/Kotlin DSL) + PostgreSQL/Flyway no backend; React 19 + TypeScript + Vite no frontend. Fundamentação no `README.md`.
+- Precisão decimal é regra de domínio: nunca `float`/`double` pra dinheiro — `BigDecimal` em toda a cadeia (potência fracionária via `big-math`, isolada em `MotorPrecificacao`); escalas/arredondamento centralizados em `pricing/Precisao.java`.
+- Manter `AI_USAGE.md` atualizado conforme o trabalho avança (seção 2), não só ao final.
+- Fluxo Git real: trunk-based sobre `dev` (Conventional Commits atômicos) → PR pra `main` (merge commit, nunca squash) → tag semântica + GitHub Release. `prod` existe só pro exercício de gestão de crise — ver seção "Estratégia de branching" do `README.md`. Nenhum commit direto em `main`.
+- Os 3 testes de integração (`*IT`, Testcontainers) falham na inicialização neste ambiente local (Docker Engine incompatível com o probe do Testcontainers 1.21.x) mas passam no CI — o pre-push roda só `--tests '*Test'` por isso. Não tratar essas falhas locais como regressão.
