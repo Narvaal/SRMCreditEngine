@@ -3,7 +3,6 @@ import type { UseFormReturn } from 'react-hook-form'
 import type { Cedente, Moeda, TipoRecebivel } from '../../api/types'
 import { Button, DateField, Input, Select } from '../../components/ui'
 import {
-  VALOR_FACE_MAXIMO,
   vencimentoMaximoYYYYMMDD,
   type RecebivelFormInput,
   type RecebivelFormOutput,
@@ -60,12 +59,12 @@ export function RecebivelForm({
         ))}
       </Select>
 
+      {/* type="text": o input numérico nativo DESCARTA a vírgula digitada em silêncio
+          ("0,01" vira "001" → cem vezes o valor) — aqui a string crua vai inteira pro Zod. */}
       <Input
         label="Valor de face"
-        type="number"
-        step="0.01"
-        min="0.01"
-        max={VALOR_FACE_MAXIMO}
+        type="text"
+        inputMode="decimal"
         placeholder="0,00"
         prefixo={simboloMoeda(moedaTitulo || 'BRL')}
         error={errors.valorFace?.message}

@@ -38,6 +38,7 @@ export const recebivelFormSchema = z.object({
       z
         .string()
         .min(1, 'Informe um valor.')
+        .regex(/^-?\d+([.,]\d*)?$/, 'Informe um valor numérico.')
         .regex(/^-?\d+([.,]\d{1,2})?$/, 'Informe um valor com até 2 casas decimais.'),
     )
     .transform((valor) => Number(valor.replace(',', '.')))

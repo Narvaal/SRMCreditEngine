@@ -61,6 +61,14 @@ describe('camposPrecificacaoSchema', () => {
     }
   })
 
+  it('rejeita texto não numérico com mensagem própria (campo agora é type=text)', () => {
+    const texto = camposPrecificacaoSchema.safeParse({ ...valoresValidos, valorFace: 'abc' })
+    expect(texto.success).toBe(false)
+    if (!texto.success) {
+      expect(texto.error.issues[0].message).toBe('Informe um valor numérico.')
+    }
+  })
+
   it('valida as casas decimais na string digitada, não no float — decimais minúsculos não passam', () => {
     // Number('500.0000000000000012...') colapsa pra exatamente 500 no IEEE-754; a validação
     // precisa acontecer antes da conversão pra pegar o que o operador realmente digitou.

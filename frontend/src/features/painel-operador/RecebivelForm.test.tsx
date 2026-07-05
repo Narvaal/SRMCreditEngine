@@ -71,6 +71,14 @@ describe('RecebivelForm', () => {
     expect(onValid).not.toHaveBeenCalled()
   })
 
+  it('valor de face é campo de texto decimal — o input numérico nativo descartaria a vírgula digitada', () => {
+    render(<Harness />)
+
+    const campo = screen.getByLabelText('Valor de face')
+    expect(campo).toHaveAttribute('type', 'text')
+    expect(campo).toHaveAttribute('inputmode', 'decimal')
+  })
+
   it('valor de face mostra o símbolo da moeda do título e acompanha a troca de moeda', async () => {
     render(<Harness />)
 
