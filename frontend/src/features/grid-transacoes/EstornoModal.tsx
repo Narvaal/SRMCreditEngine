@@ -63,7 +63,7 @@ export function EstornoModal({ linha, estornando, sucesso, erro, onConfirmar, on
         </div>
       )}
 
-      <div className="mt-6 flex justify-end gap-2">
+      <div className={`mt-6 flex gap-2 ${sucesso ? 'justify-center' : 'justify-end'}`}>
         {sucesso ? (
           <Button variante="ghost" onClick={onFechar}>
             Fechar
