@@ -132,7 +132,7 @@ describe('usePainelOperadorForm', () => {
 
     preencherCamposPrecificacao(result.current.form)
     act(() => {
-      result.current.form.setValue('valorFace', 500000.032 as never)
+      result.current.form.setValue('valorFace', '500000,032')
     })
     await act(async () => {
       await vi.advanceTimersByTimeAsync(450)

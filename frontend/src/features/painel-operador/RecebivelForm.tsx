@@ -7,7 +7,7 @@ import {
   type RecebivelFormInput,
   type RecebivelFormOutput,
 } from '../../domain/recebivelFormSchema'
-import { simboloMoeda } from '../../lib/formatters'
+import { mascararValorBR, simboloMoeda } from '../../lib/formatters'
 
 interface RecebivelFormProps {
   form: UseFormReturn<RecebivelFormInput, unknown, RecebivelFormOutput>
@@ -35,6 +35,7 @@ export function RecebivelForm({
 
   const amanha = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10)
   const moedaTitulo = watch('moedaTitulo')
+  const registroValorFace = register('valorFace')
 
   return (
     // noValidate: a validação nativa do navegador (tooltip em inglês) não pode competir com as
@@ -68,7 +69,11 @@ export function RecebivelForm({
         placeholder="0,00"
         prefixo={simboloMoeda(moedaTitulo || 'BRL')}
         error={errors.valorFace?.message}
-        {...register('valorFace')}
+        {...registroValorFace}
+        onChange={(e) => {
+          e.target.value = mascararValorBR(e.target.value)
+          registroValorFace.onChange(e)
+        }}
       />
 
       <DateField

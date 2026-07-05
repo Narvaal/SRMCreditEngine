@@ -31,6 +31,7 @@ export const recebivelFormSchema = z.object({
   tipoRecebivelCodigo: z.string().min(1, 'Selecione um tipo de recebível.'),
   // As casas decimais são validadas na STRING digitada, antes de virar number — depois da
   // conversão, "500,0000000000000012" já colapsou pra exatamente 500 no float e o erro some.
+  // Formato pt-BR (o campo é mascarado): ponto é milhar, vírgula é decimal.
   valorFace: z
     .union([z.string(), z.number()], { message: 'Informe um valor.' })
     .transform(String)
@@ -38,10 +39,10 @@ export const recebivelFormSchema = z.object({
       z
         .string()
         .min(1, 'Informe um valor.')
-        .regex(/^-?\d+([.,]\d*)?$/, 'Informe um valor numérico.')
-        .regex(/^-?\d+([.,]\d{1,2})?$/, 'Informe um valor com até 2 casas decimais.'),
+        .regex(/^(\d{1,3}(\.\d{3})*|\d+)(,\d*)?$/, 'Informe um valor numérico.')
+        .regex(/^(\d{1,3}(\.\d{3})*|\d+)(,\d{1,2})?$/, 'Informe um valor com até 2 casas decimais.'),
     )
-    .transform((valor) => Number(valor.replace(',', '.')))
+    .transform((valor) => Number(valor.replace(/\./g, '').replace(',', '.')))
     .pipe(
       z
         .number()

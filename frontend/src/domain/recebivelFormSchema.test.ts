@@ -14,7 +14,7 @@ const ONTEM = dataLocalYYYYMMDD(-1)
 describe('camposPrecificacaoSchema', () => {
   const valoresValidos = {
     tipoRecebivelCodigo: 'DUPLICATA_MERCANTIL',
-    valorFace: '1000.00',
+    valorFace: '1000,00',
     dataVencimento: AMANHA,
     moedaTitulo: 'BRL',
     moedaPagamento: 'BRL',
@@ -51,10 +51,10 @@ describe('camposPrecificacaoSchema', () => {
   })
 
   it('rejeita valorFace com mais de 2 casas decimais com mensagem clara', () => {
-    expect(camposPrecificacaoSchema.safeParse({ ...valoresValidos, valorFace: '500000.03' }).success).toBe(true)
+    expect(camposPrecificacaoSchema.safeParse({ ...valoresValidos, valorFace: '500000,03' }).success).toBe(true)
     expect(camposPrecificacaoSchema.safeParse({ ...valoresValidos, valorFace: '500,03' }).success).toBe(true)
 
-    const tresCasas = camposPrecificacaoSchema.safeParse({ ...valoresValidos, valorFace: '500000.032' })
+    const tresCasas = camposPrecificacaoSchema.safeParse({ ...valoresValidos, valorFace: '500000,032' })
     expect(tresCasas.success).toBe(false)
     if (!tresCasas.success) {
       expect(tresCasas.error.issues[0].message).toBe('Informe um valor com até 2 casas decimais.')
@@ -70,11 +70,11 @@ describe('camposPrecificacaoSchema', () => {
   })
 
   it('valida as casas decimais na string digitada, não no float — decimais minúsculos não passam', () => {
-    // Number('500.0000000000000012...') colapsa pra exatamente 500 no IEEE-754; a validação
+    // Number('500,0000000000000012...' sem a vírgula) colapsa pra exatamente 500 no IEEE-754; a validação
     // precisa acontecer antes da conversão pra pegar o que o operador realmente digitou.
     const quaseQuinhentos = camposPrecificacaoSchema.safeParse({
       ...valoresValidos,
-      valorFace: '500.0000000000000012355464564',
+      valorFace: '500,0000000000000012355464564',
     })
     expect(quaseQuinhentos.success).toBe(false)
     if (!quaseQuinhentos.success) {
@@ -105,7 +105,7 @@ describe('recebivelFormSchema', () => {
   it('exige cedenteId além dos campos de precificação', () => {
     const resultado = recebivelFormSchema.safeParse({
       tipoRecebivelCodigo: 'DUPLICATA_MERCANTIL',
-      valorFace: '1000.00',
+      valorFace: '1000,00',
       dataVencimento: AMANHA,
       moedaTitulo: 'BRL',
       moedaPagamento: 'BRL',

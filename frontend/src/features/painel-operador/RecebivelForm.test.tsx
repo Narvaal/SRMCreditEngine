@@ -79,6 +79,15 @@ describe('RecebivelForm', () => {
     expect(campo).toHaveAttribute('inputmode', 'decimal')
   })
 
+  it('valor de face aplica pontos de milhar automaticamente na digitação', async () => {
+    render(<Harness />)
+
+    const campo = screen.getByLabelText('Valor de face')
+    await userEvent.type(campo, '1234567,89')
+
+    expect(campo).toHaveValue('1.234.567,89')
+  })
+
   it('valor de face mostra o símbolo da moeda do título e acompanha a troca de moeda', async () => {
     render(<Harness />)
 
