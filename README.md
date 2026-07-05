@@ -41,7 +41,7 @@ Monorepo:
 ```
 /backend    → API, regras de negócio e persistência (Java / Spring / Gradle)
 /frontend   → Painel do Operador e Grid de Transações (TypeScript / React / Vite)
-/docs       → Diagrama ER, DDL, diagrama C4, ADRs — conforme o roadmap avança
+/docs       → Diagrama ER, diagrama C4 (Nível 1 e 2) e critérios de aceite (DDL versionado em backend/src/main/resources/db/migration)
 /infra      → Configuração de Prometheus e Grafana (provisionamento, scrape config)
 /.github/workflows → pipeline de CI (GitHub Actions)
 docker-compose.yml → orquestra Frontend + API + PostgreSQL + Prometheus + Grafana
@@ -154,7 +154,7 @@ Duas telas: **Painel do Operador** (`/painel`) — cadastra e liquida um recebí
 
 ## CI/CD
 
-`.github/workflows/ci.yml` — dispara em push/PR para `dev`/`main`/`prod` (e manualmente). 3 jobs: `backend` (`spotlessCheck` + `./gradlew build`, incluindo o teste de integração de concorrência com Testcontainers), `frontend` (`lint` + `build` + `test`), e `docker-compose-smoke-test` (sobe a stack completa via `docker compose up -d --build` e valida que API e frontend respondem de verdade, não só que cada lado builda isolado).
+`.github/workflows/ci.yml` — dispara em push/PR para `dev`/`main`/`prod` (e manualmente). 3 jobs: `backend` (`spotlessCheck` + `./gradlew build`, incluindo os 3 testes de integração com Testcontainers — concorrência, relatório e resiliência), `frontend` (`lint` + `build` + `test`), e `docker-compose-smoke-test` (sobe a stack completa via `docker compose up -d --build` e valida que API e frontend respondem de verdade, não só que cada lado builda isolado).
 
 ## Estratégia de branching
 
