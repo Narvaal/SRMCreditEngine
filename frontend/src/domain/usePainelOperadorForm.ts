@@ -23,6 +23,9 @@ const CAMPOS_PRECIFICACAO = ['tipoRecebivelCodigo', 'valorFace', 'dataVencimento
 export function usePainelOperadorForm() {
   const form = useForm<RecebivelFormInput, unknown, RecebivelFormOutput>({
     resolver: zodResolver(recebivelFormSchema),
+    // onTouched: o erro aparece assim que o operador sai do campo, casando com o aviso
+    // em tempo real do painel de resultado (que não depende de submit).
+    mode: 'onTouched',
     defaultValues: {
       cedenteId: '',
       // Duplicata Mercantil é o recebível mais comum na mesa — default em vez de placeholder vazio.
@@ -37,16 +40,21 @@ export function usePainelOperadorForm() {
   const camposObservados = form.watch(CAMPOS_PRECIFICACAO)
   const camposComAtraso = useDebouncedValue(camposObservados, DEBOUNCE_MS)
 
-  const requestSimulacao = useMemo(() => {
+  const { requestSimulacao, simulacaoComErro } = useMemo(() => {
     const [tipoRecebivelCodigo, valorFace, dataVencimento, moedaTitulo, moedaPagamento] = camposComAtraso
-    const resultado = camposPrecificacaoSchema.safeParse({
-      tipoRecebivelCodigo,
-      valorFace,
-      dataVencimento,
-      moedaTitulo,
-      moedaPagamento,
-    })
-    return resultado.success ? resultado.data : null
+    const valores = { tipoRecebivelCodigo, valorFace, dataVencimento, moedaTitulo, moedaPagamento }
+    const resultado = camposPrecificacaoSchema.safeParse(valores)
+    if (resultado.success) {
+      return { requestSimulacao: resultado.data, simulacaoComErro: false }
+    }
+    // Campo vazio é formulário incompleto ("preencha..."); campo preenchido que falhou é erro
+    // de verdade — o painel de resultado avisa em vez de fingir que só falta preencher.
+    const campoPreenchido = (campo: string) => {
+      const valor = valores[campo as keyof typeof valores]
+      return valor !== undefined && valor !== null && String(valor) !== ''
+    }
+    const comErro = resultado.error.issues.some((issue) => campoPreenchido(String(issue.path[0])))
+    return { requestSimulacao: null, simulacaoComErro: comErro }
   }, [camposComAtraso])
 
   const simulacao = useSimulacaoRecebivel(requestSimulacao)
@@ -76,6 +84,7 @@ export function usePainelOperadorForm() {
     form,
     simulacao,
     simulacaoPronta: requestSimulacao !== null,
+    simulacaoComErro,
     onSubmit,
     isSubmitting: envioMutation.isPending,
     resultadoEnvio,

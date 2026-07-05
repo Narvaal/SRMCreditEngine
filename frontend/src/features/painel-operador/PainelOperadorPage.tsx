@@ -12,7 +12,8 @@ export function PainelOperadorPage() {
   const tiposQuery = useTiposRecebivel()
   const moedasQuery = useMoedas()
 
-  const { form, simulacao, simulacaoPronta, onSubmit, isSubmitting, resultadoEnvio } = usePainelOperadorForm()
+  const { form, simulacao, simulacaoPronta, simulacaoComErro, onSubmit, isSubmitting, resultadoEnvio } =
+    usePainelOperadorForm()
 
   // Auto-seleção do cedente recém-cadastrado: o setValue só funciona quando a <option> já existe
   // no DOM, e ela só aparece depois do refetch do catálogo invalidado — por isso é um efeito
@@ -72,6 +73,7 @@ export function PainelOperadorPage() {
             carregando={simulacao.isFetching}
             erro={simulacao.error instanceof ApiError ? simulacao.error : null}
             pronto={simulacaoPronta}
+            comErro={simulacaoComErro}
           />
         </div>
       )}

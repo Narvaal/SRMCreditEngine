@@ -8,14 +8,22 @@ interface SimulacaoResultCardProps {
   carregando: boolean
   erro: ApiError | null
   pronto: boolean
+  /** Algum campo preenchido é inválido — o card avisa em vez de pedir pra "preencher". */
+  comErro: boolean
 }
 
 /** Componente puro: só exibe o que `usePainelOperadorForm` calculou — nenhuma chamada de API aqui. */
-export function SimulacaoResultCard({ dados, carregando, erro, pronto }: SimulacaoResultCardProps) {
+export function SimulacaoResultCard({ dados, carregando, erro, pronto, comErro }: SimulacaoResultCardProps) {
   if (!pronto) {
     return (
       <Card className="flex min-h-48 items-center justify-center text-center text-sm text-ink-faint">
-        Preencha os dados do recebível para ver o valor líquido calculado em tempo real.
+        {comErro ? (
+          <span className="text-danger">
+            Corrija os dados destacados no formulário para ver o valor líquido.
+          </span>
+        ) : (
+          'Preencha os dados do recebível para ver o valor líquido calculado em tempo real.'
+        )}
       </Card>
     )
   }
