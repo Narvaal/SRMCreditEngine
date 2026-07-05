@@ -1,7 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import { ApiError } from '../../api/httpClient'
 import type { ExtratoLiquidacaoLinha } from '../../api/types'
 import { EstornoModal } from './EstornoModal'
 
@@ -20,14 +19,7 @@ const linha: ExtratoLiquidacaoLinha = {
 }
 
 function renderModal(props: Partial<Parameters<typeof EstornoModal>[0]> = {}) {
-  const padrao = {
-    linha,
-    estornando: false,
-    sucesso: false,
-    erro: null,
-    onConfirmar: vi.fn(),
-    onFechar: vi.fn(),
-  }
+  const padrao = { linha, onConfirmar: vi.fn(), onFechar: vi.fn() }
   const finais = { ...padrao, ...props }
   render(<EstornoModal {...finais} />)
   return finais
@@ -63,39 +55,6 @@ describe('EstornoModal', () => {
 
     await user.click(screen.getByRole('button', { name: 'Confirmar estorno' }))
     expect(onConfirmar).toHaveBeenCalledTimes(1)
-  })
-
-  it('desabilita os botões enquanto o estorno está em voo', () => {
-    renderModal({ estornando: true })
-
-    expect(screen.getByRole('button', { name: 'Estornando...' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: 'Cancelar' })).toBeDisabled()
-  })
-
-  it('sucesso mostra a mensagem e troca os botões por Fechar', async () => {
-    const { onFechar } = renderModal({ sucesso: true })
-
-    expect(screen.getByText('Liquidação estornada com sucesso.')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Confirmar estorno' })).not.toBeInTheDocument()
-
-    await userEvent.setup().click(screen.getByRole('button', { name: 'Fechar' }))
-    expect(onFechar).toHaveBeenCalled()
-  })
-
-  it('erro da API aparece dentro do modal, mantendo confirmar disponível pra nova tentativa', () => {
-    renderModal({
-      erro: new ApiError({
-        timestamp: '2026-07-05T12:00:00Z',
-        status: 409,
-        codigo: 'ESTORNO_INVALIDO',
-        mensagem: 'Não é possível estornar a liquidação liq-1: já foi estornada anteriormente',
-        path: '/api/liquidacoes/liq-1/estorno',
-        camposInvalidos: [],
-      }),
-    })
-
-    expect(screen.getByText(/já foi estornada anteriormente/i)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Confirmar estorno' })).toBeInTheDocument()
   })
 
   it('Esc e clique no overlay fecham o modal', async () => {

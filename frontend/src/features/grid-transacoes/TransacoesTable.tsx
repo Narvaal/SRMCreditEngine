@@ -6,9 +6,11 @@ interface TransacoesTableProps {
   linhas: ExtratoLiquidacaoLinha[]
   /** Abre o modal de confirmação com os dados completos da linha — quem estorna é a página. */
   onEstornar: (linha: ExtratoLiquidacaoLinha) => void
+  /** true enquanto um estorno está em voo — trava todos os botões pra não haver 2 transações. */
+  estornoEmAndamento?: boolean
 }
 
-export function TransacoesTable({ linhas, onEstornar }: TransacoesTableProps) {
+export function TransacoesTable({ linhas, onEstornar, estornoEmAndamento = false }: TransacoesTableProps) {
   if (linhas.length === 0) {
     return <p className="py-12 text-center text-sm text-ink-muted">Nenhuma transação encontrada para os filtros selecionados.</p>
   }
@@ -21,7 +23,12 @@ export function TransacoesTable({ linhas, onEstornar }: TransacoesTableProps) {
       return <Badge tom="neutral">Estornada</Badge>
     }
     return (
-      <Button variante="secondary" className="px-2 py-1 text-xs" onClick={() => onEstornar(linha)}>
+      <Button
+        variante="secondary"
+        className="px-2 py-1 text-xs"
+        disabled={estornoEmAndamento}
+        onClick={() => onEstornar(linha)}
+      >
         Estornar
       </Button>
     )

@@ -100,7 +100,7 @@ describe('GridTransacoesPage', () => {
     await waitFor(() => expect(extratoLiquidacaoApi.buscar).toHaveBeenCalledWith(expect.objectContaining({ page: 1 })))
   })
 
-  it('estornar abre o modal com os dados, confirma na API, refaz a busca e mostra sucesso no modal', async () => {
+  it('estornar abre o modal, confirmar fecha o modal na hora e o sucesso aparece num toast', async () => {
     mockarCatalogos()
     vi.mocked(extratoLiquidacaoApi.buscar).mockResolvedValue(paginaCom('Acme Ltda'))
     vi.mocked(liquidacoesApi.estornar).mockResolvedValue({ id: 'estorno-1' } as LiquidacaoResponse)
@@ -108,27 +108,54 @@ describe('GridTransacoesPage', () => {
     render(<GridTransacoesPage />, { wrapper })
     await screen.findByRole('cell', { name: 'Acme Ltda' })
     const buscasAntes = vi.mocked(extratoLiquidacaoApi.buscar).mock.calls.length
+    const chamadasAntes = vi.mocked(liquidacoesApi.estornar).mock.calls.length
 
     const user = userEvent.setup()
     await user.click(screen.getByRole('button', { name: 'Estornar' }))
 
     // modal aberto com os dados da transação antes de qualquer chamada
-    const modal = screen.getByRole('dialog', { name: 'Estornar liquidação' })
-    expect(modal).toBeInTheDocument()
-    expect(liquidacoesApi.estornar).not.toHaveBeenCalled()
+    expect(screen.getByRole('dialog', { name: 'Estornar liquidação' })).toBeInTheDocument()
+    expect(vi.mocked(liquidacoesApi.estornar).mock.calls.length).toBe(chamadasAntes)
 
     await user.click(screen.getByRole('button', { name: 'Confirmar estorno' }))
 
+    // o modal fecha imediatamente, sem esperar a resposta
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+
     await waitFor(() => expect(liquidacoesApi.estornar).toHaveBeenCalledWith('l0'))
-    expect(await screen.findByText('Liquidação estornada com sucesso.')).toBeInTheDocument()
+    expect(await screen.findByRole('status')).toHaveTextContent('Liquidação estornada com sucesso.')
     // invalidação do extrato dispara uma nova busca
     await waitFor(() =>
       expect(vi.mocked(extratoLiquidacaoApi.buscar).mock.calls.length).toBeGreaterThan(buscasAntes),
     )
+  })
 
-    // fechar limpa o modal
-    await user.click(screen.getByRole('button', { name: 'Fechar' }))
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  it('trava os botões Estornar enquanto um estorno está em voo', async () => {
+    mockarCatalogos()
+    vi.mocked(extratoLiquidacaoApi.buscar).mockResolvedValue(paginaCom('Acme Ltda', 'Beta SA'))
+    let liberarEstorno!: (valor: LiquidacaoResponse) => void
+    vi.mocked(liquidacoesApi.estornar).mockImplementation(
+      () => new Promise((resolve) => (liberarEstorno = resolve)),
+    )
+
+    render(<GridTransacoesPage />, { wrapper })
+    await screen.findByRole('cell', { name: 'Acme Ltda' })
+
+    const user = userEvent.setup()
+    await user.click(screen.getAllByRole('button', { name: 'Estornar' })[0])
+    await user.click(screen.getByRole('button', { name: 'Confirmar estorno' }))
+
+    // com a mutação pendente, nenhum outro estorno pode começar
+    for (const botao of screen.getAllByRole('button', { name: 'Estornar' })) {
+      expect(botao).toBeDisabled()
+    }
+
+    liberarEstorno({ id: 'estorno-1' } as LiquidacaoResponse)
+    await waitFor(() => {
+      for (const botao of screen.getAllByRole('button', { name: 'Estornar' })) {
+        expect(botao).toBeEnabled()
+      }
+    })
   })
 
   it('cancelar fecha o modal sem chamar a API', async () => {
@@ -148,7 +175,7 @@ describe('GridTransacoesPage', () => {
     expect(vi.mocked(liquidacoesApi.estornar).mock.calls.length).toBe(chamadasAntes)
   })
 
-  it('erro no estorno (ex.: 409 de corrida) mostra a mensagem da API dentro do modal', async () => {
+  it('erro no estorno (ex.: 409 de corrida) mostra a mensagem da API num toast', async () => {
     mockarCatalogos()
     vi.mocked(extratoLiquidacaoApi.buscar).mockResolvedValue(paginaCom('Acme Ltda'))
     vi.mocked(liquidacoesApi.estornar).mockRejectedValue(
@@ -169,7 +196,7 @@ describe('GridTransacoesPage', () => {
     await user.click(screen.getByRole('button', { name: 'Estornar' }))
     await user.click(screen.getByRole('button', { name: 'Confirmar estorno' }))
 
-    const mensagem = await screen.findByText(/já foi estornada anteriormente/i)
-    expect(screen.getByRole('dialog', { name: 'Estornar liquidação' })).toContainElement(mensagem)
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(await screen.findByRole('status')).toHaveTextContent(/já foi estornada anteriormente/i)
   })
 })
