@@ -14,4 +14,5 @@ public record ExtratoLiquidacaoLinha(
     String moedaPagamento,
     BigDecimal valorFace,
     BigDecimal valorLiquido,
-    Instant criadoEm) {}
+    Instant criadoEm,
+    boolean estornada) {}
