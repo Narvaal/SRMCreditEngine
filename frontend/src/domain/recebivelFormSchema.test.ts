@@ -40,6 +40,24 @@ describe('camposPrecificacaoSchema', () => {
     expect(camposPrecificacaoSchema.safeParse({ ...valoresValidos, dataVencimento: '' }).success).toBe(false)
   })
 
+  it('rejeita valorFace acima de 1 quadrilhão (teto do NUMERIC(18,2) e da precisão do IEEE-754)', () => {
+    expect(camposPrecificacaoSchema.safeParse({ ...valoresValidos, valorFace: '1000000000000000' }).success).toBe(true)
+
+    const acima = camposPrecificacaoSchema.safeParse({ ...valoresValidos, valorFace: '1000000000000001' })
+    expect(acima.success).toBe(false)
+    if (!acima.success) {
+      expect(acima.error.issues[0].message).toBe('O valor máximo é 1 quadrilhão.')
+    }
+  })
+
+  it('rejeita vencimento além de 100 anos — erro de digitação, não negócio', () => {
+    const alemDoHorizonte = camposPrecificacaoSchema.safeParse({ ...valoresValidos, dataVencimento: '7000-05-01' })
+    expect(alemDoHorizonte.success).toBe(false)
+    if (!alemDoHorizonte.success) {
+      expect(alemDoHorizonte.error.issues[0].message).toBe('O vencimento não pode passar de 100 anos.')
+    }
+  })
+
   it('rejeita vencimento no passado ou hoje com mensagem clara — espelha o @Future do backend', () => {
     const passado = camposPrecificacaoSchema.safeParse({ ...valoresValidos, dataVencimento: ONTEM })
     expect(passado.success).toBe(false)

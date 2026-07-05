@@ -2,7 +2,12 @@ import type { ReactNode } from 'react'
 import type { UseFormReturn } from 'react-hook-form'
 import type { Cedente, Moeda, TipoRecebivel } from '../../api/types'
 import { Button, DateField, Input, Select } from '../../components/ui'
-import type { RecebivelFormInput, RecebivelFormOutput } from '../../domain/recebivelFormSchema'
+import {
+  VALOR_FACE_MAXIMO,
+  vencimentoMaximoYYYYMMDD,
+  type RecebivelFormInput,
+  type RecebivelFormOutput,
+} from '../../domain/recebivelFormSchema'
 import { simboloMoeda } from '../../lib/formatters'
 
 interface RecebivelFormProps {
@@ -33,7 +38,9 @@ export function RecebivelForm({
   const moedaTitulo = watch('moedaTitulo')
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-4">
+    // noValidate: a validação nativa do navegador (tooltip em inglês) não pode competir com as
+    // mensagens inline do Zod; min/max ficam só como guia do date picker e do spinner numérico.
+    <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4">
       <Select label="Cedente" error={errors.cedenteId?.message} {...register('cedenteId')}>
         <option value="">Selecione...</option>
         {cedentes.map((cedente) => (
@@ -58,13 +65,20 @@ export function RecebivelForm({
         type="number"
         step="0.01"
         min="0.01"
+        max={VALOR_FACE_MAXIMO}
         placeholder="0,00"
         prefixo={simboloMoeda(moedaTitulo || 'BRL')}
         error={errors.valorFace?.message}
         {...register('valorFace')}
       />
 
-      <DateField label="Vencimento" min={amanha} error={errors.dataVencimento?.message} {...register('dataVencimento')} />
+      <DateField
+        label="Vencimento"
+        min={amanha}
+        max={vencimentoMaximoYYYYMMDD()}
+        error={errors.dataVencimento?.message}
+        {...register('dataVencimento')}
+      />
 
       <div className="grid grid-cols-2 gap-4">
         <Select label="Moeda do título" error={errors.moedaTitulo?.message} {...register('moedaTitulo')}>

@@ -132,6 +132,25 @@ class RecebivelControllerTest {
   }
 
   @Test
+  void simular_valorFaceAcimaDeUmQuadrilhao_retorna400ComCampoDetalhado() throws Exception {
+    var request =
+        new SimulacaoRecebivelRequest(
+            "DUPLICATA_MERCANTIL",
+            new BigDecimal("5550000000000000000000000000000000000000"),
+            "BRL",
+            LocalDate.of(2099, 8, 1),
+            "BRL");
+
+    mockMvc
+        .perform(
+            post("/api/recebiveis/simular")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.camposInvalidos[0].campo").value("valorFace"));
+  }
+
+  @Test
   void simular_tipoRecebivelNaoSuportado_retorna400() throws Exception {
     when(simulacaoService.simular(any()))
         .thenThrow(new TipoRecebivelNaoSuportadoException("INEXISTENTE"));
