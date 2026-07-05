@@ -40,7 +40,7 @@ services:
       context: ./frontend
     container_name: srm-frontend
     ports:
-      - "8081:80"
+      - "8081:8080"
     depends_on:
       - backend
 

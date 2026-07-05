@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import type { UseFormReturn } from 'react-hook-form'
 import type { Cedente, Moeda, TipoRecebivel } from '../../api/types'
 import { Button, DateField, Input, Select } from '../../components/ui'
@@ -10,10 +11,20 @@ interface RecebivelFormProps {
   cedentes: Cedente[]
   tiposRecebivel: TipoRecebivel[]
   moedas: Moeda[]
+  /** Slot renderizado logo abaixo do select de cedente (ex.: cadastro inline) — mantém este form puro. */
+  cadastroCedenteSlot?: ReactNode
 }
 
 /** Componente puro: só renderiza, toda a lógica de estado vive em usePainelOperadorForm. */
-export function RecebivelForm({ form, onSubmit, isSubmitting, cedentes, tiposRecebivel, moedas }: RecebivelFormProps) {
+export function RecebivelForm({
+  form,
+  onSubmit,
+  isSubmitting,
+  cedentes,
+  tiposRecebivel,
+  moedas,
+  cadastroCedenteSlot,
+}: RecebivelFormProps) {
   const { register, formState } = form
   const { errors } = formState
 
@@ -29,6 +40,8 @@ export function RecebivelForm({ form, onSubmit, isSubmitting, cedentes, tiposRec
           </option>
         ))}
       </Select>
+
+      {cadastroCedenteSlot}
 
       <Select label="Tipo de recebível" error={errors.tipoRecebivelCodigo?.message} {...register('tipoRecebivelCodigo')}>
         <option value="">Selecione...</option>

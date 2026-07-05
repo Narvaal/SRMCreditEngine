@@ -75,9 +75,10 @@ class ExtratoLiquidacaoRepositoryIT {
 
   private Cedente cedenteA;
   private Cedente cedenteB;
-  private UUID liquidacaoL1Id; // cedente A, pagamento BRL, criado_em = 2026-01-10
+  private UUID liquidacaoL1Id; // cedente A, pagamento BRL, criado_em = 2026-01-10 (estornada)
   private UUID liquidacaoL2Id; // cedente B, pagamento USD, criado_em = 2026-01-20
   private UUID liquidacaoL3Id; // cedente A, pagamento BRL, criado_em = 2026-01-30
+  private UUID estornoE1Id; // ESTORNO de L1 (cedente A, BRL), criado_em = 2026-02-05
 
   @BeforeEach
   void seed() {
@@ -110,10 +111,12 @@ class ExtratoLiquidacaoRepositoryIT {
     Liquidacao l1 = liquidar(cedenteA, duplicata, brl, "BRL");
     Liquidacao l2 = liquidar(cedenteB, duplicata, brl, "USD");
     Liquidacao l3 = liquidar(cedenteA, duplicata, brl, "BRL");
+    Liquidacao e1 = liquidacaoService.estornar(l1.getId());
 
     liquidacaoL1Id = l1.getId();
     liquidacaoL2Id = l2.getId();
     liquidacaoL3Id = l3.getId();
+    estornoE1Id = e1.getId();
 
     // O teste inteiro roda numa única transação (@Transactional, rollback no fim — nunca commita).
     // O INSERT da última liquidação criada fica pendente no persistence context do Hibernate até
@@ -127,6 +130,7 @@ class ExtratoLiquidacaoRepositoryIT {
     forcarCriadoEm(liquidacaoL1Id, Instant.parse("2026-01-10T00:00:00Z"));
     forcarCriadoEm(liquidacaoL2Id, Instant.parse("2026-01-20T00:00:00Z"));
     forcarCriadoEm(liquidacaoL3Id, Instant.parse("2026-01-30T00:00:00Z"));
+    forcarCriadoEm(estornoE1Id, Instant.parse("2026-02-05T00:00:00Z"));
   }
 
   private Liquidacao liquidar(
@@ -158,10 +162,28 @@ class ExtratoLiquidacaoRepositoryIT {
     var resultado = extratoLiquidacaoRepository.buscar(filtro);
 
     // também prova que nenhum parâmetro nulo quebra a query (ver javadoc do repository).
-    assertThat(resultado.totalElements()).isEqualTo(3);
+    assertThat(resultado.totalElements()).isEqualTo(4);
     assertThat(resultado.content())
         .extracting(ExtratoLiquidacaoLinha::id)
-        .containsExactly(liquidacaoL3Id, liquidacaoL2Id, liquidacaoL1Id);
+        .containsExactly(estornoE1Id, liquidacaoL3Id, liquidacaoL2Id, liquidacaoL1Id);
+  }
+
+  @Test
+  void buscar_marcaComoEstornadaSoALiquidacaoQueTemEstorno() {
+    var filtro = new ExtratoLiquidacaoFiltro(null, null, null, null, 0, 20);
+
+    var resultado = extratoLiquidacaoRepository.buscar(filtro);
+
+    assertThat(resultado.content())
+        .extracting(
+            ExtratoLiquidacaoLinha::id,
+            ExtratoLiquidacaoLinha::tipo,
+            ExtratoLiquidacaoLinha::estornada)
+        .containsExactly(
+            org.assertj.core.groups.Tuple.tuple(estornoE1Id, "ESTORNO", false),
+            org.assertj.core.groups.Tuple.tuple(liquidacaoL3Id, "LIQUIDACAO", false),
+            org.assertj.core.groups.Tuple.tuple(liquidacaoL2Id, "LIQUIDACAO", false),
+            org.assertj.core.groups.Tuple.tuple(liquidacaoL1Id, "LIQUIDACAO", true));
   }
 
   @Test
@@ -170,10 +192,11 @@ class ExtratoLiquidacaoRepositoryIT {
 
     var resultado = extratoLiquidacaoRepository.buscar(filtro);
 
-    assertThat(resultado.totalElements()).isEqualTo(2);
+    // cedente A: L1, L3 e o estorno E1 (o estorno herda o cedente da liquidação original).
+    assertThat(resultado.totalElements()).isEqualTo(3);
     assertThat(resultado.content())
         .extracting(ExtratoLiquidacaoLinha::id)
-        .containsExactly(liquidacaoL3Id, liquidacaoL1Id);
+        .containsExactly(estornoE1Id, liquidacaoL3Id, liquidacaoL1Id);
     assertThat(resultado.content()).allMatch(l -> l.cedenteId().equals(cedenteA.getId()));
   }
 
@@ -214,14 +237,14 @@ class ExtratoLiquidacaoRepositoryIT {
         extratoLiquidacaoRepository.buscar(
             new ExtratoLiquidacaoFiltro(null, null, null, null, 1, 1));
 
-    assertThat(pagina0.totalElements()).isEqualTo(3);
-    assertThat(pagina0.totalPages()).isEqualTo(3);
+    assertThat(pagina0.totalElements()).isEqualTo(4);
+    assertThat(pagina0.totalPages()).isEqualTo(4);
     assertThat(pagina0.content())
         .extracting(ExtratoLiquidacaoLinha::id)
-        .containsExactly(liquidacaoL3Id);
+        .containsExactly(estornoE1Id);
     assertThat(pagina1.content())
         .extracting(ExtratoLiquidacaoLinha::id)
-        .containsExactly(liquidacaoL2Id);
+        .containsExactly(liquidacaoL3Id);
   }
 
   @Test
