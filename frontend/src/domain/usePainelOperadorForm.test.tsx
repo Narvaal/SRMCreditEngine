@@ -60,6 +60,13 @@ function loteResposta(sucesso: boolean): LoteLiquidacaoResponse {
   }
 }
 
+// Data futura dinâmica: o schema agora rejeita vencimento passado, então uma data fixa expiraria.
+const AMANHA = (() => {
+  const data = new Date()
+  data.setDate(data.getDate() + 1)
+  return `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}-${String(data.getDate()).padStart(2, '0')}`
+})()
+
 let queryClient: QueryClient
 
 function wrapper({ children }: { children: ReactNode }) {
@@ -78,7 +85,7 @@ function preencherCamposPrecificacao(form: ReturnType<typeof usePainelOperadorFo
     form.register('dataVencimento')
     form.setValue('tipoRecebivelCodigo', 'DUPLICATA_MERCANTIL')
     form.setValue('valorFace', 1000)
-    form.setValue('dataVencimento', '2026-09-15')
+    form.setValue('dataVencimento', AMANHA)
     form.setValue('moedaTitulo', 'BRL')
     form.setValue('moedaPagamento', 'BRL')
   })
@@ -107,6 +114,12 @@ describe('usePainelOperadorForm', () => {
     expect(recebiveisApi.simular).not.toHaveBeenCalled()
   })
 
+  it('abre com Duplicata Mercantil como tipo default', () => {
+    const { result } = renderHook(() => usePainelOperadorForm(), { wrapper })
+
+    expect(result.current.form.getValues('tipoRecebivelCodigo')).toBe('DUPLICATA_MERCANTIL')
+  })
+
   it('só dispara a simulação depois do debounce de 450ms com campos válidos', async () => {
     vi.useFakeTimers()
     vi.mocked(recebiveisApi.simular).mockResolvedValue(SIMULACAO_RESPOSTA)
@@ -129,7 +142,7 @@ describe('usePainelOperadorForm', () => {
     expect(recebiveisApi.simular).toHaveBeenCalledWith({
       tipoRecebivelCodigo: 'DUPLICATA_MERCANTIL',
       valorFace: 1000,
-      dataVencimento: '2026-09-15',
+      dataVencimento: AMANHA,
       moedaTitulo: 'BRL',
       moedaPagamento: 'BRL',
     })
