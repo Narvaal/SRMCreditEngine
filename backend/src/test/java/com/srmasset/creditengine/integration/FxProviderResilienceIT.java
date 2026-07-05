@@ -103,7 +103,9 @@ class FxProviderResilienceIT {
     ResponseEntity<CedenteResponse> cedente =
         rest.postForEntity(
             "/api/cedentes",
-            new CedenteRequest("Empresa Resiliente", "55444333222"),
+            // CNPJ com dígito verificador válido — o POST /cedentes agora valida documento de
+            // verdade
+            new CedenteRequest("Empresa Resiliente", "11444777000161"),
             CedenteResponse.class);
     assertThat(cedente.getStatusCode()).isEqualTo(HttpStatus.OK);
 
