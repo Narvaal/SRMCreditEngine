@@ -1,7 +1,9 @@
+import { useEffect, useState } from 'react'
 import { ApiError } from '../../api/httpClient'
 import { Alert, Card, Skeleton } from '../../components/ui'
 import { useCedentes, useMoedas, useTiposRecebivel } from '../../domain/useCatalogos'
 import { usePainelOperadorForm } from '../../domain/usePainelOperadorForm'
+import { CadastroCedenteInline } from './CadastroCedenteInline'
 import { RecebivelForm } from './RecebivelForm'
 import { SimulacaoResultCard } from './SimulacaoResultCard'
 
@@ -11,6 +13,17 @@ export function PainelOperadorPage() {
   const moedasQuery = useMoedas()
 
   const { form, simulacao, simulacaoPronta, onSubmit, isSubmitting, resultadoEnvio } = usePainelOperadorForm()
+
+  // Auto-seleção do cedente recém-cadastrado: o setValue só funciona quando a <option> já existe
+  // no DOM, e ela só aparece depois do refetch do catálogo invalidado — por isso é um efeito
+  // condicionado à lista, não um setValue direto no onCriado (que rodaria cedo demais).
+  const [cedenteRecemCriadoId, setCedenteRecemCriadoId] = useState<string | null>(null)
+  useEffect(() => {
+    if (cedenteRecemCriadoId && cedentesQuery.data?.some((c) => c.id === cedenteRecemCriadoId)) {
+      form.setValue('cedenteId', cedenteRecemCriadoId, { shouldValidate: true })
+      setCedenteRecemCriadoId(null)
+    }
+  }, [cedenteRecemCriadoId, cedentesQuery.data, form])
 
   const catalogosCarregando = cedentesQuery.isLoading || tiposQuery.isLoading || moedasQuery.isLoading
 
@@ -50,6 +63,7 @@ export function PainelOperadorPage() {
               cedentes={cedentesQuery.data ?? []}
               tiposRecebivel={tiposQuery.data ?? []}
               moedas={moedasQuery.data ?? []}
+              cadastroCedenteSlot={<CadastroCedenteInline onCriado={setCedenteRecemCriadoId} />}
             />
           </Card>
 

@@ -77,6 +77,31 @@ describe('PainelOperadorPage', () => {
     await waitFor(() => expect(recebiveisApi.enviarLote).toHaveBeenCalledTimes(1))
   })
 
+  it('cadastro de cedente inline adiciona o novo cedente e já o deixa selecionado', async () => {
+    mockarCatalogos()
+    vi.mocked(cedentesApi.criar).mockResolvedValue({ id: 'c-novo', nome: 'Nova Empresa SA', documento: '456' })
+    // depois do cadastro, o catálogo invalidado passa a listar o novo cedente
+    vi.mocked(cedentesApi.listar)
+      .mockResolvedValueOnce([{ id: 'c1', nome: 'Acme Ltda', documento: '123' }])
+      .mockResolvedValue([
+        { id: 'c1', nome: 'Acme Ltda', documento: '123' },
+        { id: 'c-novo', nome: 'Nova Empresa SA', documento: '456' },
+      ])
+
+    render(<PainelOperadorPage />, { wrapper })
+    const user = userEvent.setup()
+    await screen.findByRole('option', { name: 'Acme Ltda' })
+
+    await user.click(screen.getByRole('button', { name: /cadastrar novo cedente/i }))
+    await user.type(screen.getByLabelText('Nome'), 'Nova Empresa SA')
+    await user.type(screen.getByLabelText('Documento'), '456')
+    await user.click(screen.getByRole('button', { name: 'Cadastrar' }))
+
+    // catálogo re-buscado com o novo cedente, e o select já vem com ele selecionado
+    expect(await screen.findByRole('option', { name: 'Nova Empresa SA' })).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByLabelText('Cedente')).toHaveValue('c-novo'))
+  })
+
   it('submissão com falha mostra a mensagem de erro retornada pela API', async () => {
     mockarCatalogos()
     const resposta: LoteLiquidacaoResponse = {
