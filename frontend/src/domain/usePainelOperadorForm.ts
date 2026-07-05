@@ -25,7 +25,8 @@ export function usePainelOperadorForm() {
     resolver: zodResolver(recebivelFormSchema),
     defaultValues: {
       cedenteId: '',
-      tipoRecebivelCodigo: '',
+      // Duplicata Mercantil é o recebível mais comum na mesa — default em vez de placeholder vazio.
+      tipoRecebivelCodigo: 'DUPLICATA_MERCANTIL',
       valorFace: '' as unknown as number,
       dataVencimento: '',
       moedaTitulo: 'BRL',

@@ -79,13 +79,13 @@ describe('PainelOperadorPage', () => {
 
   it('cadastro de cedente inline adiciona o novo cedente e já o deixa selecionado', async () => {
     mockarCatalogos()
-    vi.mocked(cedentesApi.criar).mockResolvedValue({ id: 'c-novo', nome: 'Nova Empresa SA', documento: '456' })
+    vi.mocked(cedentesApi.criar).mockResolvedValue({ id: 'c-novo', nome: 'Nova Empresa SA', documento: '52998224725' })
     // depois do cadastro, o catálogo invalidado passa a listar o novo cedente
     vi.mocked(cedentesApi.listar)
       .mockResolvedValueOnce([{ id: 'c1', nome: 'Acme Ltda', documento: '123' }])
       .mockResolvedValue([
         { id: 'c1', nome: 'Acme Ltda', documento: '123' },
-        { id: 'c-novo', nome: 'Nova Empresa SA', documento: '456' },
+        { id: 'c-novo', nome: 'Nova Empresa SA', documento: '52998224725' },
       ])
 
     render(<PainelOperadorPage />, { wrapper })
@@ -94,7 +94,7 @@ describe('PainelOperadorPage', () => {
 
     await user.click(screen.getByRole('button', { name: /cadastrar novo cedente/i }))
     await user.type(screen.getByLabelText('Nome'), 'Nova Empresa SA')
-    await user.type(screen.getByLabelText('Documento'), '456')
+    await user.type(screen.getByLabelText('Documento'), '52998224725')
     await user.click(screen.getByRole('button', { name: 'Cadastrar' }))
 
     // catálogo re-buscado com o novo cedente, e o select já vem com ele selecionado

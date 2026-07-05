@@ -46,7 +46,6 @@ export function RecebivelForm({
       {cadastroCedenteSlot}
 
       <Select label="Tipo de recebível" error={errors.tipoRecebivelCodigo?.message} {...register('tipoRecebivelCodigo')}>
-        <option value="">Selecione...</option>
         {tiposRecebivel.map((tipo) => (
           <option key={tipo.codigo} value={tipo.codigo}>
             {tipo.nome}
