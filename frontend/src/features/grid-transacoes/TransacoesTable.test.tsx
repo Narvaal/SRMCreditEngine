@@ -72,33 +72,13 @@ describe('TransacoesTable', () => {
     expect(screen.getByText('Estornada')).toBeInTheDocument()
   })
 
-  it('só chama onEstornar depois da confirmação em dois cliques', async () => {
+  it('clicar em Estornar entrega a linha completa pro chamador (que abre o modal)', async () => {
     const onEstornar = vi.fn()
     render(<TransacoesTable linhas={[linhaBase]} onEstornar={onEstornar} />)
     const user = userEvent.setup()
 
     await user.click(screen.getByRole('button', { name: 'Estornar' }))
-    expect(onEstornar).not.toHaveBeenCalled()
 
-    await user.click(screen.getByRole('button', { name: 'Confirmar estorno' }))
-    expect(onEstornar).toHaveBeenCalledWith('1')
-  })
-
-  it('cancelar aborta a confirmação sem chamar onEstornar', async () => {
-    const onEstornar = vi.fn()
-    render(<TransacoesTable linhas={[linhaBase]} onEstornar={onEstornar} />)
-    const user = userEvent.setup()
-
-    await user.click(screen.getByRole('button', { name: 'Estornar' }))
-    await user.click(screen.getByRole('button', { name: 'Cancelar' }))
-
-    expect(onEstornar).not.toHaveBeenCalled()
-    expect(screen.getByRole('button', { name: 'Estornar' })).toBeInTheDocument()
-  })
-
-  it('desabilita a ação da linha cujo estorno está em voo', () => {
-    render(<TransacoesTable linhas={[linhaBase]} onEstornar={vi.fn()} estornandoId="1" />)
-
-    expect(screen.getByRole('button', { name: 'Estornando...' })).toBeDisabled()
+    expect(onEstornar).toHaveBeenCalledWith(linhaBase)
   })
 })

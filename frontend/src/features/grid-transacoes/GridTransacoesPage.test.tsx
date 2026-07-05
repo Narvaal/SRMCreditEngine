@@ -100,7 +100,7 @@ describe('GridTransacoesPage', () => {
     await waitFor(() => expect(extratoLiquidacaoApi.buscar).toHaveBeenCalledWith(expect.objectContaining({ page: 1 })))
   })
 
-  it('estornar com confirmação chama a API e refaz a busca do extrato', async () => {
+  it('estornar abre o modal com os dados, confirma na API, refaz a busca e mostra sucesso no modal', async () => {
     mockarCatalogos()
     vi.mocked(extratoLiquidacaoApi.buscar).mockResolvedValue(paginaCom('Acme Ltda'))
     vi.mocked(liquidacoesApi.estornar).mockResolvedValue({ id: 'estorno-1' } as LiquidacaoResponse)
@@ -111,16 +111,44 @@ describe('GridTransacoesPage', () => {
 
     const user = userEvent.setup()
     await user.click(screen.getByRole('button', { name: 'Estornar' }))
+
+    // modal aberto com os dados da transação antes de qualquer chamada
+    const modal = screen.getByRole('dialog', { name: 'Estornar liquidação' })
+    expect(modal).toBeInTheDocument()
+    expect(liquidacoesApi.estornar).not.toHaveBeenCalled()
+
     await user.click(screen.getByRole('button', { name: 'Confirmar estorno' }))
 
     await waitFor(() => expect(liquidacoesApi.estornar).toHaveBeenCalledWith('l0'))
+    expect(await screen.findByText('Liquidação estornada com sucesso.')).toBeInTheDocument()
     // invalidação do extrato dispara uma nova busca
     await waitFor(() =>
       expect(vi.mocked(extratoLiquidacaoApi.buscar).mock.calls.length).toBeGreaterThan(buscasAntes),
     )
+
+    // fechar limpa o modal
+    await user.click(screen.getByRole('button', { name: 'Fechar' }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
-  it('erro no estorno (ex.: 409 de corrida) mostra a mensagem da API num alerta', async () => {
+  it('cancelar fecha o modal sem chamar a API', async () => {
+    mockarCatalogos()
+    vi.mocked(extratoLiquidacaoApi.buscar).mockResolvedValue(paginaCom('Acme Ltda'))
+
+    render(<GridTransacoesPage />, { wrapper })
+    await screen.findByRole('cell', { name: 'Acme Ltda' })
+    // mocks são de módulo — compara contagem pra não depender de outros testes do arquivo
+    const chamadasAntes = vi.mocked(liquidacoesApi.estornar).mock.calls.length
+
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: 'Estornar' }))
+    await user.click(screen.getByRole('button', { name: 'Cancelar' }))
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(vi.mocked(liquidacoesApi.estornar).mock.calls.length).toBe(chamadasAntes)
+  })
+
+  it('erro no estorno (ex.: 409 de corrida) mostra a mensagem da API dentro do modal', async () => {
     mockarCatalogos()
     vi.mocked(extratoLiquidacaoApi.buscar).mockResolvedValue(paginaCom('Acme Ltda'))
     vi.mocked(liquidacoesApi.estornar).mockRejectedValue(
@@ -141,6 +169,7 @@ describe('GridTransacoesPage', () => {
     await user.click(screen.getByRole('button', { name: 'Estornar' }))
     await user.click(screen.getByRole('button', { name: 'Confirmar estorno' }))
 
-    expect(await screen.findByText(/já foi estornada anteriormente/i)).toBeInTheDocument()
+    const mensagem = await screen.findByText(/já foi estornada anteriormente/i)
+    expect(screen.getByRole('dialog', { name: 'Estornar liquidação' })).toContainElement(mensagem)
   })
 })
