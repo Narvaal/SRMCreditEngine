@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { calcularDesagioPercentual, fimDoDiaSeguinteISO, formatarMoeda, inicioDoDiaISO } from './formatters'
+import { calcularDesagioPercentual, fimDoDiaSeguinteISO, formatarMoeda, inicioDoDiaISO, simboloMoeda } from './formatters'
 
 describe('formatarMoeda', () => {
   it('formata em BRL', () => {
@@ -8,6 +8,13 @@ describe('formatarMoeda', () => {
 
   it('formata em USD', () => {
     expect(formatarMoeda(875.46, 'USD')).toContain('875,46')
+  })
+})
+
+describe('simboloMoeda', () => {
+  it('extrai o símbolo pt-BR da moeda', () => {
+    expect(simboloMoeda('BRL')).toBe('R$')
+    expect(simboloMoeda('USD')).toBe('US$')
   })
 })
 

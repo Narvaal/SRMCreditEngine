@@ -10,6 +10,12 @@ export function formatarMoeda(valor: number, moeda: string): string {
   return formatador.format(valor)
 }
 
+/** Símbolo da moeda na convenção pt-BR (BRL → "R$", USD → "US$") — extraído do próprio Intl. */
+export function simboloMoeda(moeda: string): string {
+  const partes = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: moeda }).formatToParts(0)
+  return partes.find((parte) => parte.type === 'currency')?.value ?? moeda
+}
+
 export function formatarPercentual(valor: number, casasDecimais = 2): string {
   return `${(valor * 100).toFixed(casasDecimais)}%`
 }

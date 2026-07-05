@@ -3,6 +3,7 @@ import type { UseFormReturn } from 'react-hook-form'
 import type { Cedente, Moeda, TipoRecebivel } from '../../api/types'
 import { Button, DateField, Input, Select } from '../../components/ui'
 import type { RecebivelFormInput, RecebivelFormOutput } from '../../domain/recebivelFormSchema'
+import { simboloMoeda } from '../../lib/formatters'
 
 interface RecebivelFormProps {
   form: UseFormReturn<RecebivelFormInput, unknown, RecebivelFormOutput>
@@ -25,10 +26,11 @@ export function RecebivelForm({
   moedas,
   cadastroCedenteSlot,
 }: RecebivelFormProps) {
-  const { register, formState } = form
+  const { register, formState, watch } = form
   const { errors } = formState
 
   const amanha = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10)
+  const moedaTitulo = watch('moedaTitulo')
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-4">
@@ -58,6 +60,7 @@ export function RecebivelForm({
         step="0.01"
         min="0.01"
         placeholder="0,00"
+        prefixo={simboloMoeda(moedaTitulo || 'BRL')}
         error={errors.valorFace?.message}
         {...register('valorFace')}
       />

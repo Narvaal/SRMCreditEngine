@@ -62,6 +62,17 @@ describe('RecebivelForm', () => {
     expect(onValid).not.toHaveBeenCalled()
   })
 
+  it('valor de face mostra o símbolo da moeda do título e acompanha a troca de moeda', async () => {
+    render(<Harness />)
+
+    expect(screen.getByText('R$')).toBeInTheDocument()
+
+    await userEvent.selectOptions(screen.getByLabelText('Moeda do título'), 'USD')
+
+    expect(screen.getByText('US$')).toBeInTheDocument()
+    expect(screen.queryByText('R$')).not.toBeInTheDocument()
+  })
+
   it('isSubmitting desabilita o botão e troca o texto', () => {
     render(<Harness isSubmitting />)
 
