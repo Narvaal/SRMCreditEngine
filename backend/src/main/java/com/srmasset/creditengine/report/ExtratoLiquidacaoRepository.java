@@ -40,6 +40,10 @@ public class ExtratoLiquidacaoRepository {
       where.append(" and l.moeda_pagamento = :moeda ");
       params.addValue("moeda", filtro.moeda());
     }
+    if (filtro.tipo() != null) {
+      where.append(" and l.tipo = :tipo ");
+      params.addValue("tipo", filtro.tipo());
+    }
     if (filtro.dataInicio() != null) {
       where.append(" and l.criado_em >= :dataInicio ");
       params.addValue("dataInicio", Timestamp.from(filtro.dataInicio()));
@@ -62,9 +66,11 @@ public class ExtratoLiquidacaoRepository {
         """
         select l.id, l.recebivel_id, l.cedente_id, c.nome as cedente_nome, l.tipo,
                l.moeda_titulo, l.moeda_pagamento, l.valor_face, l.valor_liquido, l.criado_em,
-               exists(select 1 from liquidacao e where e.liquidacao_estornada_id = l.id) as estornada
+               exists(select 1 from liquidacao e where e.liquidacao_estornada_id = l.id) as estornada,
+               l.liquidacao_estornada_id, orig.criado_em as liquidacao_estornada_criado_em
         from liquidacao l
         join cedente c on c.id = l.cedente_id
+        left join liquidacao orig on orig.id = l.liquidacao_estornada_id
         """
             + where
             + """
@@ -88,7 +94,11 @@ public class ExtratoLiquidacaoRepository {
                     rs.getBigDecimal("valor_face"),
                     rs.getBigDecimal("valor_liquido"),
                     rs.getTimestamp("criado_em").toInstant(),
-                    rs.getBoolean("estornada")));
+                    rs.getBoolean("estornada"),
+                    (UUID) rs.getObject("liquidacao_estornada_id"),
+                    rs.getTimestamp("liquidacao_estornada_criado_em") == null
+                        ? null
+                        : rs.getTimestamp("liquidacao_estornada_criado_em").toInstant()));
 
     return PaginaResponse.de(linhas, filtro.page(), size, total == null ? 0 : total);
   }

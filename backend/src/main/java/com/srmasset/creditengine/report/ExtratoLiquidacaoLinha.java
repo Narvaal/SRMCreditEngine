@@ -15,4 +15,10 @@ public record ExtratoLiquidacaoLinha(
     BigDecimal valorFace,
     BigDecimal valorLiquido,
     Instant criadoEm,
-    boolean estornada) {}
+    boolean estornada,
+    /**
+     * Preenchidos só em linhas ESTORNO: referência da liquidação desfeita (o frontend funde as
+     * duas).
+     */
+    UUID liquidacaoEstornadaId,
+    Instant liquidacaoEstornadaCriadoEm) {}
