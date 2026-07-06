@@ -10,6 +10,9 @@ import {
   rotuloTipoTransacao,
 } from '../../lib/formatters'
 
+// Largura fixa pra coluna de ações não "pular" na troca Ver origem ↔ Recolher.
+const CLASSES_BOTAO_ACAO = 'w-24 whitespace-nowrap px-2 py-1 text-xs'
+
 interface TransacoesTableProps {
   transacoes: TransacaoAgrupada[]
   /** Abre o modal de confirmação com os dados completos da linha — quem estorna é a página. */
@@ -43,7 +46,7 @@ export function TransacoesTable({ transacoes, onEstornar, estornoEmAndamento = f
       return (
         <Button
           variante="primary"
-          className="px-2 py-1 text-xs"
+          className={CLASSES_BOTAO_ACAO}
           disabled={estornoEmAndamento}
           onClick={() => onEstornar(linha)}
         >
@@ -57,7 +60,7 @@ export function TransacoesTable({ transacoes, onEstornar, estornoEmAndamento = f
       return (
         <Button
           variante="secondary"
-          className="px-2 py-1 text-xs"
+          className={CLASSES_BOTAO_ACAO}
           aria-expanded={expandida}
           onClick={() => alternarExpandida(linha.id)}
         >
@@ -106,25 +109,29 @@ export function TransacoesTable({ transacoes, onEstornar, estornoEmAndamento = f
                 <Td className="text-right">{renderAcao(exibida, original, expandida)}</Td>
               </tr>
               {expandida && original && (
-                <tr className="bg-surface-muted">
-                  <Td>{formatarDataHora(original.criadoEm)}</Td>
+                <tr className="bg-surface-muted [&>td]:text-ink-muted">
+                  <Td>
+                    <span aria-hidden className="mr-2 text-ink-faint">
+                      ↳
+                    </span>
+                    {formatarDataHora(original.criadoEm)}
+                  </Td>
                   <Td>{original.cedenteNome}</Td>
                   <Td>
-                    <Badge tom="brand">{rotuloTipoTransacao(original.tipo)}</Badge>
+                    <Badge tom="warning">Origem</Badge>
                   </Td>
                   <Td>
                     {original.moedaTitulo} → {original.moedaPagamento}
                   </Td>
                   <Td className="tabular-nums text-right">{formatarMoeda(original.valorFace, original.moedaTitulo)}</Td>
-                  <Td className="tabular-nums text-right">{formatarMoeda(original.valorLiquido, original.moedaPagamento)}</Td>
-                  <Td className="tabular-nums text-right text-ink-muted">
+                  <Td className="tabular-nums text-right">
+                    {formatarMoeda(original.valorLiquido, original.moedaPagamento)}
+                  </Td>
+                  <Td className="tabular-nums text-right">
                     {formatarPercentual(calcularDesagioPercentual(original.valorFace, original.valorPresente))}
                   </Td>
-                  {/* A original já foi estornada — nenhuma ação disponível; a seta liga ao estorno acima. */}
-                  <Td className="text-center">
-                    <span aria-hidden className="text-lg text-ink-faint">
-                      ↲
-                    </span>
+                  {/* A original já foi estornada — nenhuma ação disponível. */}
+                  <Td className="text-right">
                     <span className="sr-only">Operação original</span>
                   </Td>
                 </tr>

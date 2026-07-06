@@ -117,13 +117,26 @@ describe('TransacoesTable', () => {
     await user.click(screen.getByRole('button', { name: 'Ver origem' }))
 
     expect(screen.getByText('Operação original')).toBeInTheDocument()
-    expect(screen.getByText('Liquidação')).toBeInTheDocument()
+    expect(screen.getByText('Origem')).toBeInTheDocument()
     expect(screen.getByText(/05\/07\/2026/)).toBeInTheDocument()
 
     // o botão vira Recolher e recolhe no segundo clique
     await user.click(screen.getByRole('button', { name: 'Recolher' }))
     expect(screen.queryByText('Operação original')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Ver origem' })).toBeInTheDocument()
+  })
+
+  it('linha de origem usa um badge único Origem, sem repetir Liquidação', async () => {
+    const estorno = { ...linhaBase, id: 'est', tipo: 'ESTORNO' as const, liquidacaoEstornadaId: 'liq' }
+    render(<TransacoesTable transacoes={paraTabela([estorno])} onEstornar={vi.fn()} />)
+    const user = userEvent.setup()
+
+    await user.click(screen.getByRole('button', { name: 'Ver origem' }))
+    expect(screen.getByText('Origem')).toBeInTheDocument()
+    expect(screen.queryByText('Liquidação')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Recolher' }))
+    expect(screen.queryByText('Origem')).not.toBeInTheDocument()
   })
 
   it('liquidações comuns e estornos legados sem referência não têm Ver origem', () => {
