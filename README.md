@@ -64,7 +64,8 @@ docker-compose.yml → orquestra Frontend + API + PostgreSQL + Prometheus + Graf
 - [x] Primeiro release: PR `dev → main` + tag semântica [`v1.0.0`](https://github.com/Narvaal/SRMCreditEngine/releases/tag/v1.0.0)
 - [x] Simulação de gestão de crise: hotfix (`backend/Dockerfile` não-root) `git cherry-pick` de `main` pra `prod`, tag [`v1.0.1`](https://github.com/Narvaal/SRMCreditEngine/releases/tag/v1.0.1) — ver "Estratégia de branching" abaixo e `ROADMAP.md`
 - [x] Resiliência: retry + circuit breaker (Resilience4j) na integração com o provider externo de taxas (mockado), com degradação graciosa — ver seção "Resiliência" abaixo e `ROADMAP.md`
-- [x] Estorno pela UI (Grid, com confirmação e flag de já-estornada), cadastro de cedente inline no Painel, e containers 100% não-root (backend + frontend) — ver `ROADMAP.md`, Passo 15
+- [x] Estorno pela UI (Grid, com confirmação), cadastro de cedente inline no Painel, e containers 100% não-root (backend + frontend) — ver `ROADMAP.md`, Passo 15
+- [x] Grid de estado final e hardening do Painel: modal de confirmação + toast no estorno, liquidação estornada sai do extrato (a linha do estorno a representa e expande a operação de origem), filtro por tipo, taxa correta em cross-currency, validação de CPF/CNPJ e máscaras de valor — ver `ROADMAP.md`, Passo 16
 
 ## Como rodar (stack completa: API + banco + observabilidade)
 
@@ -119,7 +120,7 @@ export DB_PASSWORD=srm
 | `POST` | `/api/liquidacoes/{id}/estorno` | Estorna uma liquidação (nunca edita a original) |
 | `GET`/`POST` | `/api/taxas-cambio` | Consulta/registra taxa de câmbio vigente |
 | `GET`/`POST` | `/api/taxas-mercado` | Consulta/registra taxa de mercado (CDI/SOFR) vigente |
-| `GET` | `/api/relatorios/extrato-liquidacao` | Extrato paginado/filtrado (cedente, moeda, período) — 2 camadas, SQL nativo |
+| `GET` | `/api/relatorios/extrato-liquidacao` | Extrato paginado/filtrado (cedente, tipo, moeda, período) — 2 camadas, SQL nativo |
 | `POST` | `/api/recebiveis/simular` | Read-only: calcula o valor líquido sem persistir nada (usado pelo Painel do Operador) |
 | `GET` | `/api/moedas`, `/api/tipos-recebivel` | Catálogos (BRL/USD, Duplicata Mercantil/Cheque Pré-datado) |
 | `POST` | `/api/taxas/sincronizar` | Busca cotações no provider externo (mockado) via client com retry + circuit breaker e persiste — `503 PROVIDER_INDISPONIVEL` se o provider estiver fora |
@@ -150,7 +151,7 @@ npm install
 npm run dev   # http://localhost:5173
 ```
 
-Duas telas: **Painel do Operador** (`/painel`) — cadastra e liquida um recebível, com o valor líquido calculado em tempo real conforme o formulário é preenchido e cadastro de cedente inline (o cedente novo já sai selecionado) — e **Grid de Transações** (`/transacoes`) — histórico paginado com filtros por cedente/moeda/período refletidos na URL, e estorno direto na tabela (com confirmação; liquidações já estornadas ficam marcadas e sem ação).
+Duas telas: **Painel do Operador** (`/painel`) — cadastra e liquida um recebível, com o valor líquido calculado em tempo real conforme o formulário é preenchido e cadastro de cedente inline (o cedente novo já sai selecionado) — e **Grid de Transações** (`/transacoes`) — histórico paginado com filtros por cedente/tipo/moeda/período refletidos na URL e estorno direto na tabela (modal de confirmação com os detalhes da transação; resultado via toast). A grid mostra o **estado final** de cada operação: liquidação já estornada não aparece — a linha do estorno a representa e expande a operação de origem ("Ver origem").
 
 ## CI/CD
 

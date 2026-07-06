@@ -4,7 +4,7 @@ Formaliza os critérios de aceite do desafio (`CLAUDE.md`, seção 5: usabilidad
 
 Cada critério é uma afirmação verificável — **Atendido**, com a evidência (arquivo/teste/decisão) que sustenta a afirmação, ou **Gap conhecido**, com a razão de não estar implementado e o custo/risco de deixar assim. O objetivo não é declarar o sistema "pronto para produção" — é ser honesto sobre o que foi construído e o que ficou de fora conscientemente, dado o escopo de um desafio técnico de 3–4 dias úteis.
 
-Reflete o estado do sistema em 2026-07-04 (ver `ROADMAP.md` para o histórico de decisões).
+Reflete o estado do sistema em 2026-07-06 (ver `ROADMAP.md` para o histórico de decisões).
 
 ---
 
@@ -19,7 +19,7 @@ Reflete o estado do sistema em 2026-07-04 (ver `ROADMAP.md` para o histórico de
 | U5 | A API é autoexplicável — um consumidor novo consegue descobrir contratos sem ler código-fonte | ✅ Atendido | OpenAPI/Swagger em `/swagger-ui/index.html` (springdoc), gerado a partir das anotações dos controllers/DTOs |
 | U6 | Toda resposta de erro da API segue um envelope único e previsível (campo de código de erro estável, não só a mensagem em texto livre) | ✅ Atendido | `ErroResponse` (`timestamp`, `status`, `codigo`, `mensagem`, `path`, `camposInvalidos`) — usado por todos os `@ExceptionHandler` de `GlobalExceptionHandler`; o frontend depende do `codigo` (não da `mensagem`) pra lógica, e usa a `mensagem` só para exibição |
 | U7 | Uma operação em lote com itens mistos (sucesso + falha) informa o resultado de cada item, não um status único para a requisição toda | ✅ Atendido | `LoteLiquidacaoResponse` sempre `200`, com `itens[]` individual — decisão de domínio registrada no `ROADMAP.md` (Passo 1) |
-| U8 | O operador consegue estornar uma liquidação pela própria Grid, com confirmação, e sem conseguir estornar o que já foi estornado | ✅ Atendido | Coluna "Ações" na Grid: botão "Estornar" só em `LIQUIDACAO` não-estornada (flag `estornada` vinda do extrato), confirmação inline em dois cliques, erro da API (ex.: 409 de corrida) exibido em alerta. Coberto por testes de componente/página e validado via Playwright (`ROADMAP.md`, Passo 15) |
+| U8 | O operador consegue estornar uma liquidação pela própria Grid, com confirmação, e sem conseguir estornar o que já foi estornado | ✅ Atendido | Coluna "Ações" na Grid: botão "Estornar" só em `LIQUIDACAO` — liquidação já estornada nem aparece no extrato (excluída no SQL; a linha do estorno a representa e expande a operação de origem). Confirmação em modal com os detalhes completos da transação, resultado (sucesso/409 de corrida) via toast, e botões travados enquanto um estorno está em voo. Coberto por testes de componente/página e validado via Playwright (`ROADMAP.md`, Passos 15–16) |
 | U9 | O operador consegue cadastrar um cedente novo sem sair do Painel, e ele já sai selecionado no formulário | ✅ Atendido | `CadastroCedenteInline` (expande sob o select), reusa `POST /api/cedentes`, invalida o catálogo e auto-seleciona via efeito condicionado à lista re-buscada (setValue direto rodaria antes da `<option>` existir — bug real pego pelo teste de composição). 409 `CEDENTE_DUPLICADO` exibido inline |
 
 ## Segurança
