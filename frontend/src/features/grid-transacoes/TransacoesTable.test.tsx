@@ -97,7 +97,7 @@ describe('TransacoesTable', () => {
     expect(onEstornar).toHaveBeenCalledWith(linhaBase)
   })
 
-  it('estorno com referência é expansível e mostra a operação original com data e tipo', async () => {
+  it('estorno com referência tem Ver origem, que expande a operação original e vira Recolher', async () => {
     const estorno = {
       ...linhaBase,
       id: 'est',
@@ -114,18 +114,19 @@ describe('TransacoesTable', () => {
 
     // expande: aparece a operação original com a data real da liquidação
     const user = userEvent.setup()
-    await user.click(screen.getByRole('button', { name: 'Exibir operação original' }))
+    await user.click(screen.getByRole('button', { name: 'Ver origem' }))
 
     expect(screen.getByText('Operação original')).toBeInTheDocument()
     expect(screen.getByText('Liquidação')).toBeInTheDocument()
     expect(screen.getByText(/05\/07\/2026/)).toBeInTheDocument()
 
-    // recolhe no segundo clique
-    await user.click(screen.getByRole('button', { name: 'Recolher operação original' }))
+    // o botão vira Recolher e recolhe no segundo clique
+    await user.click(screen.getByRole('button', { name: 'Recolher' }))
     expect(screen.queryByText('Operação original')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Ver origem' })).toBeInTheDocument()
   })
 
-  it('liquidações comuns e estornos legados sem referência não têm seta de expandir', () => {
+  it('liquidações comuns e estornos legados sem referência não têm Ver origem', () => {
     render(
       <TransacoesTable
         transacoes={paraTabela([linhaBase, { ...linhaBase, id: 'est-solo', recebivelId: 'r-solo', tipo: 'ESTORNO' }])}
@@ -133,10 +134,10 @@ describe('TransacoesTable', () => {
       />,
     )
 
-    expect(screen.queryByRole('button', { name: /operação original/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Ver origem' })).not.toBeInTheDocument()
   })
 
-  it('apenas uma linha fica expandida por vez', async () => {
+  it('linhas expandem de forma independente — várias podem ficar abertas ao mesmo tempo', async () => {
     const estornos = [
       { ...linhaBase, id: 'est1', tipo: 'ESTORNO' as const, liquidacaoEstornadaId: 'liq1' },
       { ...linhaBase, id: 'est2', tipo: 'ESTORNO' as const, liquidacaoEstornadaId: 'liq2' },
@@ -144,15 +145,19 @@ describe('TransacoesTable', () => {
     render(<TransacoesTable transacoes={paraTabela(estornos)} onEstornar={vi.fn()} />)
     const user = userEvent.setup()
 
-    const setas = screen.getAllByRole('button', { name: 'Exibir operação original' })
-    expect(setas).toHaveLength(2)
+    const botoes = screen.getAllByRole('button', { name: 'Ver origem' })
+    expect(botoes).toHaveLength(2)
 
-    await user.click(setas[0])
+    await user.click(botoes[0])
     expect(screen.getAllByText('Operação original')).toHaveLength(1)
 
-    // expandir a segunda recolhe a primeira
-    await user.click(screen.getByRole('button', { name: 'Exibir operação original' }))
+    // expandir a segunda mantém a primeira aberta
+    await user.click(screen.getByRole('button', { name: 'Ver origem' }))
+    expect(screen.getAllByText('Operação original')).toHaveLength(2)
+    expect(screen.getAllByRole('button', { name: 'Recolher' })).toHaveLength(2)
+
+    // fechar uma não afeta a outra
+    await user.click(screen.getAllByRole('button', { name: 'Recolher' })[0])
     expect(screen.getAllByText('Operação original')).toHaveLength(1)
-    expect(screen.getAllByRole('button', { name: 'Exibir operação original' })).toHaveLength(1)
   })
 })

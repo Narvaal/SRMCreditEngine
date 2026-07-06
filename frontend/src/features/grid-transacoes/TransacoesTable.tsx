@@ -19,38 +19,59 @@ interface TransacoesTableProps {
 }
 
 export function TransacoesTable({ transacoes, onEstornar, estornoEmAndamento = false }: TransacoesTableProps) {
-  // Uma linha expandida por vez — estado puramente de apresentação, por isso vive aqui.
-  const [expandidaId, setExpandidaId] = useState<string | null>(null)
+  // Expansão independente por linha — estado puramente de apresentação, por isso vive aqui.
+  const [expandidas, setExpandidas] = useState<ReadonlySet<string>>(new Set())
 
   if (transacoes.length === 0) {
     return <p className="py-12 text-center text-sm text-ink-muted">Nenhuma transação encontrada para os filtros selecionados.</p>
   }
 
-  function renderAcao(linha: ExtratoLiquidacaoLinha) {
-    // Só LIQUIDACAO é estornável — e toda liquidação exibida ainda não foi estornada
-    // (as estornadas não vêm no extrato; a linha do estorno as representa).
-    if (linha.tipo !== 'LIQUIDACAO') {
-      return <span className="text-ink-faint">—</span>
+  function alternarExpandida(id: string) {
+    setExpandidas((atual) => {
+      const proximo = new Set(atual)
+      if (!proximo.delete(id)) {
+        proximo.add(id)
+      }
+      return proximo
+    })
+  }
+
+  function renderAcao(linha: ExtratoLiquidacaoLinha, original: ExtratoLiquidacaoLinha | undefined, expandida: boolean) {
+    // Toda liquidação exibida ainda não foi estornada (as estornadas não vêm no
+    // extrato; a linha do estorno as representa).
+    if (linha.tipo === 'LIQUIDACAO') {
+      return (
+        <Button
+          variante="primary"
+          className="px-2 py-1 text-xs"
+          disabled={estornoEmAndamento}
+          onClick={() => onEstornar(linha)}
+        >
+          Estornar
+        </Button>
+      )
     }
-    return (
-      <Button
-        variante="secondary"
-        className="px-2 py-1 text-xs"
-        disabled={estornoEmAndamento}
-        onClick={() => onEstornar(linha)}
-      >
-        Estornar
-      </Button>
-    )
+    // Estorno com referência: consulta da operação original. Legados sem referência não têm ação.
+    // Variante invertida em relação ao Estornar pra diferenciar consulta de ação transacional.
+    if (original) {
+      return (
+        <Button
+          variante="secondary"
+          className="px-2 py-1 text-xs"
+          aria-expanded={expandida}
+          onClick={() => alternarExpandida(linha.id)}
+        >
+          {expandida ? 'Recolher' : 'Ver origem'}
+        </Button>
+      )
+    }
+    return <span className="text-ink-faint">—</span>
   }
 
   return (
     <Table>
       <TableHead>
         <tr>
-          <Th className="w-8">
-            <span className="sr-only">Detalhes</span>
-          </Th>
           <Th>Data</Th>
           <Th>Cedente</Th>
           <Th>Tipo</Th>
@@ -63,23 +84,10 @@ export function TransacoesTable({ transacoes, onEstornar, estornoEmAndamento = f
       </TableHead>
       <TableBody>
         {transacoes.map(({ exibida, original }) => {
-          const expandida = expandidaId === exibida.id
+          const expandida = expandidas.has(exibida.id)
           return (
             <Fragment key={exibida.id}>
               <tr className="hover:bg-surface-muted/60">
-                <Td className="pr-0">
-                  {original && (
-                    <button
-                      type="button"
-                      aria-expanded={expandida}
-                      aria-label={expandida ? 'Recolher operação original' : 'Exibir operação original'}
-                      className="text-xs text-ink-muted transition-colors hover:text-ink"
-                      onClick={() => setExpandidaId(expandida ? null : exibida.id)}
-                    >
-                      {expandida ? '▼' : '▶'}
-                    </button>
-                  )}
-                </Td>
                 <Td>{formatarDataHora(exibida.criadoEm)}</Td>
                 <Td>{exibida.cedenteNome}</Td>
                 <Td>
@@ -95,14 +103,10 @@ export function TransacoesTable({ transacoes, onEstornar, estornoEmAndamento = f
                       também em operação cross-currency, onde o valor líquido está em outra moeda. */}
                   {formatarPercentual(calcularDesagioPercentual(exibida.valorFace, exibida.valorPresente))}
                 </Td>
-                <Td className="text-right">{renderAcao(exibida)}</Td>
+                <Td className="text-right">{renderAcao(exibida, original, expandida)}</Td>
               </tr>
               {expandida && original && (
-                <tr className="bg-surface-muted/40">
-                  <Td className="pr-0 text-ink-faint">
-                    <span aria-hidden>↳</span>
-                    <span className="sr-only">Operação original</span>
-                  </Td>
+                <tr className="bg-surface-muted">
                   <Td>{formatarDataHora(original.criadoEm)}</Td>
                   <Td>{original.cedenteNome}</Td>
                   <Td>
@@ -116,9 +120,12 @@ export function TransacoesTable({ transacoes, onEstornar, estornoEmAndamento = f
                   <Td className="tabular-nums text-right text-ink-muted">
                     {formatarPercentual(calcularDesagioPercentual(original.valorFace, original.valorPresente))}
                   </Td>
-                  {/* A original já foi estornada — nenhuma ação disponível. */}
-                  <Td className="text-right">
-                    <span className="text-ink-faint">—</span>
+                  {/* A original já foi estornada — nenhuma ação disponível; a seta liga ao estorno acima. */}
+                  <Td className="text-center">
+                    <span aria-hidden className="text-lg text-ink-faint">
+                      ↲
+                    </span>
+                    <span className="sr-only">Operação original</span>
                   </Td>
                 </tr>
               )}
