@@ -56,7 +56,7 @@ describe('EstornoModal', () => {
     expect(onFechar).toHaveBeenCalledTimes(1)
     expect(onConfirmar).not.toHaveBeenCalled()
 
-    await user.click(screen.getByRole('button', { name: 'Confirmar estorno' }))
+    await user.click(screen.getByRole('button', { name: 'Confirmar' }))
     expect(onConfirmar).toHaveBeenCalledTimes(1)
   })
 

@@ -119,7 +119,7 @@ describe('GridTransacoesPage', () => {
     expect(screen.getByRole('dialog', { name: 'Estornar liquidação' })).toBeInTheDocument()
     expect(vi.mocked(liquidacoesApi.estornar).mock.calls.length).toBe(chamadasAntes)
 
-    await user.click(screen.getByRole('button', { name: 'Confirmar estorno' }))
+    await user.click(screen.getByRole('button', { name: 'Confirmar' }))
 
     // o modal fecha imediatamente, sem esperar a resposta
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
@@ -145,7 +145,7 @@ describe('GridTransacoesPage', () => {
 
     const user = userEvent.setup()
     await user.click(screen.getAllByRole('button', { name: 'Estornar' })[0])
-    await user.click(screen.getByRole('button', { name: 'Confirmar estorno' }))
+    await user.click(screen.getByRole('button', { name: 'Confirmar' }))
 
     // com a mutação pendente, nenhum outro estorno pode começar
     for (const botao of screen.getAllByRole('button', { name: 'Estornar' })) {
@@ -196,7 +196,7 @@ describe('GridTransacoesPage', () => {
 
     const user = userEvent.setup()
     await user.click(screen.getByRole('button', { name: 'Estornar' }))
-    await user.click(screen.getByRole('button', { name: 'Confirmar estorno' }))
+    await user.click(screen.getByRole('button', { name: 'Confirmar' }))
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(await screen.findByRole('status')).toHaveTextContent(/já foi estornada anteriormente/i)

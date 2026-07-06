@@ -21,7 +21,7 @@ export function EstornoModal({ linha, onConfirmar, onFechar }: EstornoModalProps
         <Button variante="ghost" onClick={onFechar}>
           Cancelar
         </Button>
-        <Button onClick={onConfirmar}>Confirmar estorno</Button>
+        <Button onClick={onConfirmar}>Confirmar</Button>
       </div>
     </Modal>
   )

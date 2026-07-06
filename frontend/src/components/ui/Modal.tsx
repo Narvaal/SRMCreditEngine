@@ -29,7 +29,7 @@ export function Modal({ titulo, onFechar, children }: ModalProps) {
         className="w-full max-w-md rounded-lg border border-border bg-surface p-6 shadow-xl"
         onClick={(evento) => evento.stopPropagation()}
       >
-        <h2 className="mb-4 text-lg font-semibold text-ink">{titulo}</h2>
+        <h2 className="mb-6 text-center text-lg font-semibold text-ink">{titulo}</h2>
         {children}
       </div>
     </div>
