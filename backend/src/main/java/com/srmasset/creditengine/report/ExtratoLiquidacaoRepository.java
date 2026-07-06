@@ -29,7 +29,13 @@ public class ExtratoLiquidacaoRepository {
   }
 
   public PaginaResponse<ExtratoLiquidacaoLinha> buscar(ExtratoLiquidacaoFiltro filtro) {
-    StringBuilder where = new StringBuilder(" where 1 = 1 ");
+    // Visão de estado final: liquidação já estornada sai do extrato — a operação passa a ser
+    // representada pela linha do ESTORNO, que carrega a referência da original.
+    StringBuilder where =
+        new StringBuilder(
+            """
+             where not exists (select 1 from liquidacao e where e.liquidacao_estornada_id = l.id)
+            """);
     MapSqlParameterSource params = new MapSqlParameterSource();
 
     if (filtro.cedenteId() != null) {
@@ -66,7 +72,6 @@ public class ExtratoLiquidacaoRepository {
         """
         select l.id, l.recebivel_id, l.cedente_id, c.nome as cedente_nome, l.tipo,
                l.moeda_titulo, l.moeda_pagamento, l.valor_face, l.valor_liquido, l.criado_em,
-               exists(select 1 from liquidacao e where e.liquidacao_estornada_id = l.id) as estornada,
                l.liquidacao_estornada_id, orig.criado_em as liquidacao_estornada_criado_em
         from liquidacao l
         join cedente c on c.id = l.cedente_id
@@ -94,7 +99,6 @@ public class ExtratoLiquidacaoRepository {
                     rs.getBigDecimal("valor_face"),
                     rs.getBigDecimal("valor_liquido"),
                     rs.getTimestamp("criado_em").toInstant(),
-                    rs.getBoolean("estornada"),
                     (UUID) rs.getObject("liquidacao_estornada_id"),
                     rs.getTimestamp("liquidacao_estornada_criado_em") == null
                         ? null

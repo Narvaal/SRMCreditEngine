@@ -162,28 +162,22 @@ class ExtratoLiquidacaoRepositoryIT {
     var resultado = extratoLiquidacaoRepository.buscar(filtro);
 
     // também prova que nenhum parâmetro nulo quebra a query (ver javadoc do repository).
-    assertThat(resultado.totalElements()).isEqualTo(4);
+    // L1 (estornada) não aparece: a linha do estorno E1 representa a operação.
+    assertThat(resultado.totalElements()).isEqualTo(3);
     assertThat(resultado.content())
         .extracting(ExtratoLiquidacaoLinha::id)
-        .containsExactly(estornoE1Id, liquidacaoL3Id, liquidacaoL2Id, liquidacaoL1Id);
+        .containsExactly(estornoE1Id, liquidacaoL3Id, liquidacaoL2Id);
   }
 
   @Test
-  void buscar_marcaComoEstornadaSoALiquidacaoQueTemEstorno() {
+  void buscar_liquidacaoJaEstornada_naoApareceNoExtrato() {
     var filtro = new ExtratoLiquidacaoFiltro(null, null, null, null, null, 0, 20);
 
     var resultado = extratoLiquidacaoRepository.buscar(filtro);
 
     assertThat(resultado.content())
-        .extracting(
-            ExtratoLiquidacaoLinha::id,
-            ExtratoLiquidacaoLinha::tipo,
-            ExtratoLiquidacaoLinha::estornada)
-        .containsExactly(
-            org.assertj.core.groups.Tuple.tuple(estornoE1Id, "ESTORNO", false),
-            org.assertj.core.groups.Tuple.tuple(liquidacaoL3Id, "LIQUIDACAO", false),
-            org.assertj.core.groups.Tuple.tuple(liquidacaoL2Id, "LIQUIDACAO", false),
-            org.assertj.core.groups.Tuple.tuple(liquidacaoL1Id, "LIQUIDACAO", true));
+        .extracting(ExtratoLiquidacaoLinha::id)
+        .doesNotContain(liquidacaoL1Id);
   }
 
   @Test
@@ -213,7 +207,7 @@ class ExtratoLiquidacaoRepositoryIT {
     assertThat(soEstornos.content())
         .extracting(ExtratoLiquidacaoLinha::id)
         .containsExactly(estornoE1Id);
-    assertThat(soLiquidacoes.totalElements()).isEqualTo(3);
+    assertThat(soLiquidacoes.totalElements()).isEqualTo(2);
     assertThat(soLiquidacoes.content()).allMatch(l -> l.tipo().equals("LIQUIDACAO"));
   }
 
@@ -223,11 +217,11 @@ class ExtratoLiquidacaoRepositoryIT {
 
     var resultado = extratoLiquidacaoRepository.buscar(filtro);
 
-    // cedente A: L1, L3 e o estorno E1 (o estorno herda o cedente da liquidação original).
-    assertThat(resultado.totalElements()).isEqualTo(3);
+    // cedente A: L3 e o estorno E1 (que herda o cedente); L1 estornada fica de fora.
+    assertThat(resultado.totalElements()).isEqualTo(2);
     assertThat(resultado.content())
         .extracting(ExtratoLiquidacaoLinha::id)
-        .containsExactly(estornoE1Id, liquidacaoL3Id, liquidacaoL1Id);
+        .containsExactly(estornoE1Id, liquidacaoL3Id);
     assertThat(resultado.content()).allMatch(l -> l.cedenteId().equals(cedenteA.getId()));
   }
 
@@ -269,8 +263,8 @@ class ExtratoLiquidacaoRepositoryIT {
         extratoLiquidacaoRepository.buscar(
             new ExtratoLiquidacaoFiltro(null, null, null, null, null, 1, 1));
 
-    assertThat(pagina0.totalElements()).isEqualTo(4);
-    assertThat(pagina0.totalPages()).isEqualTo(4);
+    assertThat(pagina0.totalElements()).isEqualTo(3);
+    assertThat(pagina0.totalPages()).isEqualTo(3);
     assertThat(pagina0.content())
         .extracting(ExtratoLiquidacaoLinha::id)
         .containsExactly(estornoE1Id);

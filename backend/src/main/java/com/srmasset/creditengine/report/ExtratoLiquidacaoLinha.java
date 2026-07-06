@@ -15,10 +15,9 @@ public record ExtratoLiquidacaoLinha(
     BigDecimal valorFace,
     BigDecimal valorLiquido,
     Instant criadoEm,
-    boolean estornada,
     /**
      * Preenchidos só em linhas ESTORNO: referência da liquidação desfeita (o frontend funde as
-     * duas).
+     * duas). Liquidações já estornadas não aparecem no extrato — a linha do estorno as representa.
      */
     UUID liquidacaoEstornadaId,
     Instant liquidacaoEstornadaCriadoEm) {}
