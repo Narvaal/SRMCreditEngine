@@ -61,6 +61,11 @@ export function inicioDoDiaISO(dataYYYYMMDD: string): string {
   return new Date(`${dataYYYYMMDD}T00:00:00Z`).toISOString()
 }
 
+/** Rótulo humano do tipo de transação do extrato. */
+export function rotuloTipoTransacao(tipo: 'LIQUIDACAO' | 'ESTORNO'): string {
+  return tipo === 'ESTORNO' ? 'Estorno' : 'Liquidação'
+}
+
 /** Deságio: quanto do valor de face foi descontado, em %. Aritmética de exibição — não repete regra de negócio. */
 export function calcularDesagioPercentual(valorFace: number, valorLiquido: number): number {
   if (valorFace === 0) return 0

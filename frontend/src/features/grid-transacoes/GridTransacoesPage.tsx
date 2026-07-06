@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { ApiError } from '../../api/httpClient'
 import type { ExtratoLiquidacaoLinha } from '../../api/types'
 import { Card, Pagination, Skeleton, Toast } from '../../components/ui'
+import { agruparEstornosComOriginal } from '../../domain/extratoAgrupado'
 import { useCedentes, useMoedas } from '../../domain/useCatalogos'
 import { useEstornarLiquidacao } from '../../domain/useEstornarLiquidacao'
 import { useExtratoFiltrosUrlState } from '../../domain/useExtratoFiltrosUrlState'
@@ -25,6 +26,9 @@ export function GridTransacoesPage() {
   // Linha selecionada pro estorno — o modal só confirma; o resultado da mutação vai pro toast.
   const [linhaParaEstorno, setLinhaParaEstorno] = useState<ExtratoLiquidacaoLinha | null>(null)
   const [toast, setToast] = useState<ToastEstorno | null>(null)
+
+  // Estorno + liquidação original viram uma linha só (estado final) — transformação de exibição.
+  const transacoes = useMemo(() => agruparEstornosComOriginal(extratoQuery.data?.content ?? []), [extratoQuery.data])
 
   function confirmarEstorno() {
     if (!linhaParaEstorno) return
@@ -63,7 +67,7 @@ export function GridTransacoesPage() {
       ) : (
         <>
           <TransacoesTable
-            linhas={extratoQuery.data?.content ?? []}
+            transacoes={transacoes}
             onEstornar={setLinhaParaEstorno}
             estornoEmAndamento={estornoMutation.isPending}
           />

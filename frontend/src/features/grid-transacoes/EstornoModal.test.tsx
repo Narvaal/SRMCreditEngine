@@ -31,7 +31,7 @@ describe('EstornoModal', () => {
 
     expect(screen.getByRole('dialog', { name: 'Estornar liquidação' })).toBeInTheDocument()
     expect(screen.getByText('Empresa Teste Ltda')).toBeInTheDocument()
-    expect(screen.getByText('LIQUIDACAO')).toBeInTheDocument()
+    expect(screen.getByText('Liquidação')).toBeInTheDocument()
     expect(screen.getByText('BRL → BRL')).toBeInTheDocument()
     expect(screen.getByText(/1\.000,00/)).toBeInTheDocument()
     expect(screen.getByText(/900,00/)).toBeInTheDocument()
