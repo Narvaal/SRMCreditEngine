@@ -90,9 +90,10 @@ export interface ExtratoLiquidacaoLinha {
   valorFace: number
   valorLiquido: number
   criadoEm: string
-  /** true quando esta LIQUIDACAO já tem um ESTORNO apontando pra ela — some o botão de estornar. */
-  estornada: boolean
-  /** Preenchidos só em linhas ESTORNO: referência da liquidação desfeita (a UI funde as duas). */
+  /**
+   * Preenchidos só em linhas ESTORNO: referência da liquidação desfeita. Liquidações já
+   * estornadas não vêm no extrato — a linha do estorno representa a operação.
+   */
   liquidacaoEstornadaId: string | null
   liquidacaoEstornadaCriadoEm: string | null
 }

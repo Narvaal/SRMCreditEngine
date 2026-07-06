@@ -16,7 +16,6 @@ const linhaBase: ExtratoLiquidacaoLinha = {
   valorFace: 1000,
   valorLiquido: 900,
   criadoEm: '2026-07-03T12:00:00Z',
-  estornada: false,
   liquidacaoEstornadaId: null,
   liquidacaoEstornadaCriadoEm: null,
 }
@@ -64,19 +63,18 @@ describe('TransacoesTable', () => {
     expect(screen.getByText('10.00%')).toBeInTheDocument()
   })
 
-  it('mostra o botão Estornar só em LIQUIDACAO não-estornada', () => {
+  it('mostra o botão Estornar só em LIQUIDACAO — estorno não é estornável', () => {
     render(
       <TransacoesTable
         transacoes={paraTabela([
           { ...linhaBase, id: 'liq' },
-          { ...linhaBase, id: 'liq-estornada', recebivelId: 'r-solo', estornada: true },
+          { ...linhaBase, id: 'estorno', recebivelId: 'r-solo', tipo: 'ESTORNO' },
         ])}
         onEstornar={vi.fn()}
       />,
     )
 
     expect(screen.getAllByRole('button', { name: 'Estornar' })).toHaveLength(1)
-    expect(screen.getByText('Estornada')).toBeInTheDocument()
   })
 
   it('clicar em Estornar entrega a linha completa pro chamador (que abre o modal)', async () => {
@@ -89,8 +87,7 @@ describe('TransacoesTable', () => {
     expect(onEstornar).toHaveBeenCalledWith(linhaBase)
   })
 
-  it('estorno pareado vira uma linha só, expansível, com os dados da liquidação original', async () => {
-    const liquidacao = { ...linhaBase, id: 'liq', estornada: true, valorFace: 222.22, valorLiquido: 182.92 }
+  it('estorno com referência é expansível e mostra a operação original com data e tipo', async () => {
     const estorno = {
       ...linhaBase,
       id: 'est',
@@ -99,20 +96,19 @@ describe('TransacoesTable', () => {
       valorLiquido: 182.92,
       criadoEm: '2026-07-07T09:14:00Z',
       liquidacaoEstornadaId: 'liq',
-      liquidacaoEstornadaCriadoEm: linhaBase.criadoEm,
+      liquidacaoEstornadaCriadoEm: '2026-07-05T20:52:00Z',
     }
-    render(<TransacoesTable transacoes={paraTabela([estorno, liquidacao])} onEstornar={vi.fn()} />)
+    render(<TransacoesTable transacoes={paraTabela([estorno])} onEstornar={vi.fn()} />)
 
-    // uma linha só, com o tipo do estorno e os valores da liquidação
     expect(screen.getAllByText('Estorno')).toHaveLength(1)
-    expect(screen.queryByText('Estornada')).not.toBeInTheDocument()
 
-    // expande: aparece a operação original
+    // expande: aparece a operação original com a data real da liquidação
     const user = userEvent.setup()
     await user.click(screen.getByRole('button', { name: 'Exibir operação original' }))
 
     expect(screen.getByText('Operação original')).toBeInTheDocument()
     expect(screen.getByText('Liquidação')).toBeInTheDocument()
+    expect(screen.getByText(/05\/07\/2026/)).toBeInTheDocument()
 
     // recolhe no segundo clique
     await user.click(screen.getByRole('button', { name: 'Recolher operação original' }))
@@ -130,30 +126,12 @@ describe('TransacoesTable', () => {
     expect(screen.queryByRole('button', { name: /operação original/i })).not.toBeInTheDocument()
   })
 
-  it('estorno com referência mas sem a liquidação na página continua expansível', async () => {
-    const estorno = {
-      ...linhaBase,
-      id: 'est-cross',
-      tipo: 'ESTORNO' as const,
-      liquidacaoEstornadaId: 'liq-outra-pagina',
-      liquidacaoEstornadaCriadoEm: '2026-07-01T08:00:00Z',
-    }
-    render(<TransacoesTable transacoes={paraTabela([estorno])} onEstornar={vi.fn()} />)
-
-    await userEvent.setup().click(screen.getByRole('button', { name: 'Exibir operação original' }))
-    expect(screen.getByText('Operação original')).toBeInTheDocument()
-  })
-
   it('apenas uma linha fica expandida por vez', async () => {
-    const par1 = [
-      { ...linhaBase, id: 'liq1', recebivelId: 'ra', estornada: true },
-      { ...linhaBase, id: 'est1', recebivelId: 'ra', tipo: 'ESTORNO' as const, liquidacaoEstornadaId: 'liq1' },
+    const estornos = [
+      { ...linhaBase, id: 'est1', tipo: 'ESTORNO' as const, liquidacaoEstornadaId: 'liq1' },
+      { ...linhaBase, id: 'est2', tipo: 'ESTORNO' as const, liquidacaoEstornadaId: 'liq2' },
     ]
-    const par2 = [
-      { ...linhaBase, id: 'liq2', recebivelId: 'rb', estornada: true },
-      { ...linhaBase, id: 'est2', recebivelId: 'rb', tipo: 'ESTORNO' as const, liquidacaoEstornadaId: 'liq2' },
-    ]
-    render(<TransacoesTable transacoes={paraTabela([...par1, ...par2])} onEstornar={vi.fn()} />)
+    render(<TransacoesTable transacoes={paraTabela(estornos)} onEstornar={vi.fn()} />)
     const user = userEvent.setup()
 
     const setas = screen.getAllByRole('button', { name: 'Exibir operação original' })

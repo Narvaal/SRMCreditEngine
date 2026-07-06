@@ -26,7 +26,6 @@ function paginaCom(id: string): PaginaResponse<ExtratoLiquidacaoLinha> {
         valorFace: 1000,
         valorLiquido: 900,
         criadoEm: '2026-07-01T00:00:00Z',
-        estornada: false,
         liquidacaoEstornadaId: null,
         liquidacaoEstornadaCriadoEm: null,
       },

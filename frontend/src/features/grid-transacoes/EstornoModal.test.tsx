@@ -15,7 +15,6 @@ const linha: ExtratoLiquidacaoLinha = {
   valorFace: 1000,
   valorLiquido: 900,
   criadoEm: '2026-07-03T12:00:00Z',
-  estornada: false,
   liquidacaoEstornadaId: null,
   liquidacaoEstornadaCriadoEm: null,
 }

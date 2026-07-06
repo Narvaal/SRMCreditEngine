@@ -30,11 +30,10 @@ export function TransacoesTable({ transacoes, onEstornar, estornoEmAndamento = f
   }
 
   function renderAcao(linha: ExtratoLiquidacaoLinha) {
+    // Só LIQUIDACAO é estornável — e toda liquidação exibida ainda não foi estornada
+    // (as estornadas não vêm no extrato; a linha do estorno as representa).
     if (linha.tipo !== 'LIQUIDACAO') {
       return <span className="text-ink-faint">—</span>
-    }
-    if (linha.estornada) {
-      return <Badge tom="neutral">Estornada</Badge>
     }
     return (
       <Button
