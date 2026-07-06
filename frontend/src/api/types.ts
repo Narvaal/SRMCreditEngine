@@ -88,10 +88,16 @@ export interface ExtratoLiquidacaoLinha {
   moedaTitulo: string
   moedaPagamento: string
   valorFace: number
+  /** Na moeda do título — base correta pra taxa de deságio mesmo em operação cross-currency. */
+  valorPresente: number
   valorLiquido: number
   criadoEm: string
-  /** true quando esta LIQUIDACAO já tem um ESTORNO apontando pra ela — some o botão de estornar. */
-  estornada: boolean
+  /**
+   * Preenchidos só em linhas ESTORNO: referência da liquidação desfeita. Liquidações já
+   * estornadas não vêm no extrato — a linha do estorno representa a operação.
+   */
+  liquidacaoEstornadaId: string | null
+  liquidacaoEstornadaCriadoEm: string | null
 }
 
 export interface PaginaResponse<T> {
@@ -105,6 +111,7 @@ export interface PaginaResponse<T> {
 export interface ExtratoLiquidacaoFiltro {
   cedenteId?: string
   moeda?: string
+  tipo?: string
   dataInicio?: string
   dataFim?: string
   page: number

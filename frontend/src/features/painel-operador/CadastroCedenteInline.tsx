@@ -2,10 +2,22 @@ import { useState } from 'react'
 import { ApiError } from '../../api/httpClient'
 import { Alert, Button, Input } from '../../components/ui'
 import { useCadastroCedente } from '../../domain/useCadastroCedente'
+import {
+  documentoSomenteDigitos,
+  mascararDocumento,
+  mensagemErroDocumento,
+  validarDocumento,
+  validarRazaoSocial,
+} from '../../lib/documento'
 
 interface CadastroCedenteInlineProps {
   /** Chamado com o id do cedente recém-criado — o Painel usa pra auto-selecionar no formulário. */
   onCriado: (cedenteId: string) => void
+}
+
+interface ErrosCampos {
+  nome?: string
+  documento?: string
 }
 
 /**
@@ -16,19 +28,29 @@ export function CadastroCedenteInline({ onCriado }: CadastroCedenteInlineProps) 
   const [aberto, setAberto] = useState(false)
   const [nome, setNome] = useState('')
   const [documento, setDocumento] = useState('')
-  const [erroValidacao, setErroValidacao] = useState<string | null>(null)
+  const [errosValidacao, setErrosValidacao] = useState<ErrosCampos>({})
 
   const cadastro = useCadastroCedente()
   const erroApi = cadastro.error instanceof ApiError ? cadastro.error : null
 
+  // Erros de bean-validation do backend chegam por campo em camposInvalidos — exibimos
+  // inline igual aos erros de validação local; o Alert fica só pra erros gerais (ex.: 409).
+  const errosApiPorCampo = new Map((erroApi?.camposInvalidos ?? []).map((c) => [c.campo, c.mensagem]))
+  const erroNome = errosValidacao.nome ?? errosApiPorCampo.get('nome')
+  const erroDocumento = errosValidacao.documento ?? errosApiPorCampo.get('documento')
+  const erroGeral = erroApi && errosApiPorCampo.size === 0 ? erroApi.message || 'Não foi possível cadastrar o cedente.' : null
+
   function cadastrar() {
-    if (!nome.trim() || !documento.trim()) {
-      setErroValidacao('Informe nome e documento do cedente.')
-      return
-    }
-    setErroValidacao(null)
+    const erros: ErrosCampos = {}
+    const erroRazaoSocial = validarRazaoSocial(nome)
+    if (erroRazaoSocial) erros.nome = erroRazaoSocial
+    if (!validarDocumento(documento)) erros.documento = mensagemErroDocumento(documento)
+
+    setErrosValidacao(erros)
+    if (erros.nome || erros.documento) return
+
     cadastro.mutate(
-      { nome: nome.trim(), documento: documento.trim() },
+      { nome: nome.trim(), documento: documentoSomenteDigitos(documento) },
       {
         onSuccess: (novo) => {
           setAberto(false)
@@ -62,17 +84,20 @@ export function CadastroCedenteInline({ onCriado }: CadastroCedenteInlineProps) 
         value={nome}
         onChange={(e) => setNome(e.target.value)}
         placeholder="Razão social"
+        maxLength={20}
+        error={erroNome}
       />
       <Input
         label="Documento"
         name="novoCedenteDocumento"
         value={documento}
-        onChange={(e) => setDocumento(e.target.value)}
-        placeholder="CNPJ/CPF (só números)"
+        onChange={(e) => setDocumento(mascararDocumento(e.target.value))}
+        placeholder="CPF/CNPJ"
+        inputMode="numeric"
+        error={erroDocumento}
       />
 
-      {erroValidacao && <Alert tipo="error">{erroValidacao}</Alert>}
-      {erroApi && <Alert tipo="error">{erroApi.message || 'Não foi possível cadastrar o cedente.'}</Alert>}
+      {erroGeral && <Alert tipo="error">{erroGeral}</Alert>}
 
       <div className="flex gap-2">
         <Button type="button" className="px-3 py-1.5 text-xs" disabled={cadastro.isPending} onClick={cadastrar}>

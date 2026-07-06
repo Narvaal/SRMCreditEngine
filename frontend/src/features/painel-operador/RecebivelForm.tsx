@@ -2,7 +2,12 @@ import type { ReactNode } from 'react'
 import type { UseFormReturn } from 'react-hook-form'
 import type { Cedente, Moeda, TipoRecebivel } from '../../api/types'
 import { Button, DateField, Input, Select } from '../../components/ui'
-import type { RecebivelFormInput, RecebivelFormOutput } from '../../domain/recebivelFormSchema'
+import {
+  vencimentoMaximoYYYYMMDD,
+  type RecebivelFormInput,
+  type RecebivelFormOutput,
+} from '../../domain/recebivelFormSchema'
+import { mascararValorBR, simboloMoeda } from '../../lib/formatters'
 
 interface RecebivelFormProps {
   form: UseFormReturn<RecebivelFormInput, unknown, RecebivelFormOutput>
@@ -25,13 +30,17 @@ export function RecebivelForm({
   moedas,
   cadastroCedenteSlot,
 }: RecebivelFormProps) {
-  const { register, formState } = form
+  const { register, formState, watch } = form
   const { errors } = formState
 
   const amanha = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10)
+  const moedaTitulo = watch('moedaTitulo')
+  const registroValorFace = register('valorFace')
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-4">
+    // noValidate: a validação nativa do navegador (tooltip em inglês) não pode competir com as
+    // mensagens inline do Zod; min/max ficam só como guia do date picker e do spinner numérico.
+    <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4">
       <Select label="Cedente" error={errors.cedenteId?.message} {...register('cedenteId')}>
         <option value="">Selecione...</option>
         {cedentes.map((cedente) => (
@@ -44,7 +53,6 @@ export function RecebivelForm({
       {cadastroCedenteSlot}
 
       <Select label="Tipo de recebível" error={errors.tipoRecebivelCodigo?.message} {...register('tipoRecebivelCodigo')}>
-        <option value="">Selecione...</option>
         {tiposRecebivel.map((tipo) => (
           <option key={tipo.codigo} value={tipo.codigo}>
             {tipo.nome}
@@ -52,17 +60,29 @@ export function RecebivelForm({
         ))}
       </Select>
 
+      {/* type="text": o input numérico nativo DESCARTA a vírgula digitada em silêncio
+          ("0,01" vira "001" → cem vezes o valor) — aqui a string crua vai inteira pro Zod. */}
       <Input
         label="Valor de face"
-        type="number"
-        step="0.01"
-        min="0.01"
+        type="text"
+        inputMode="decimal"
         placeholder="0,00"
+        prefixo={simboloMoeda(moedaTitulo || 'BRL')}
         error={errors.valorFace?.message}
-        {...register('valorFace')}
+        {...registroValorFace}
+        onChange={(e) => {
+          e.target.value = mascararValorBR(e.target.value)
+          registroValorFace.onChange(e)
+        }}
       />
 
-      <DateField label="Vencimento" min={amanha} error={errors.dataVencimento?.message} {...register('dataVencimento')} />
+      <DateField
+        label="Vencimento"
+        min={amanha}
+        max={vencimentoMaximoYYYYMMDD()}
+        error={errors.dataVencimento?.message}
+        {...register('dataVencimento')}
+      />
 
       <div className="grid grid-cols-2 gap-4">
         <Select label="Moeda do título" error={errors.moedaTitulo?.message} {...register('moedaTitulo')}>

@@ -22,9 +22,10 @@ export function TableRow({ children }: { children: ReactNode }) {
   return <tr className="hover:bg-surface-muted/60">{children}</tr>
 }
 
-export function Th({ children, ...props }: ThHTMLAttributes<HTMLTableCellElement>) {
+export function Th({ children, className = '', ...props }: ThHTMLAttributes<HTMLTableCellElement>) {
+  // Mescla o className recebido com o base (igual ao Td) — sobrescrever removia o padding.
   return (
-    <th className="px-4 py-3 font-medium" {...props}>
+    <th className={`px-4 py-3 font-medium ${className}`} {...props}>
       {children}
     </th>
   )

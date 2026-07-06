@@ -157,52 +157,77 @@ class ExtratoLiquidacaoRepositoryIT {
 
   @Test
   void buscar_semFiltros_retornaTodasOrdenadasPorCriadoEmDesc() {
-    var filtro = new ExtratoLiquidacaoFiltro(null, null, null, null, 0, 20);
+    var filtro = new ExtratoLiquidacaoFiltro(null, null, null, null, null, 0, 20);
 
     var resultado = extratoLiquidacaoRepository.buscar(filtro);
 
     // também prova que nenhum parâmetro nulo quebra a query (ver javadoc do repository).
-    assertThat(resultado.totalElements()).isEqualTo(4);
+    // L1 (estornada) não aparece: a linha do estorno E1 representa a operação.
+    assertThat(resultado.totalElements()).isEqualTo(3);
     assertThat(resultado.content())
         .extracting(ExtratoLiquidacaoLinha::id)
-        .containsExactly(estornoE1Id, liquidacaoL3Id, liquidacaoL2Id, liquidacaoL1Id);
+        .containsExactly(estornoE1Id, liquidacaoL3Id, liquidacaoL2Id);
   }
 
   @Test
-  void buscar_marcaComoEstornadaSoALiquidacaoQueTemEstorno() {
-    var filtro = new ExtratoLiquidacaoFiltro(null, null, null, null, 0, 20);
+  void buscar_liquidacaoJaEstornada_naoApareceNoExtrato() {
+    var filtro = new ExtratoLiquidacaoFiltro(null, null, null, null, null, 0, 20);
 
     var resultado = extratoLiquidacaoRepository.buscar(filtro);
 
     assertThat(resultado.content())
-        .extracting(
-            ExtratoLiquidacaoLinha::id,
-            ExtratoLiquidacaoLinha::tipo,
-            ExtratoLiquidacaoLinha::estornada)
-        .containsExactly(
-            org.assertj.core.groups.Tuple.tuple(estornoE1Id, "ESTORNO", false),
-            org.assertj.core.groups.Tuple.tuple(liquidacaoL3Id, "LIQUIDACAO", false),
-            org.assertj.core.groups.Tuple.tuple(liquidacaoL2Id, "LIQUIDACAO", false),
-            org.assertj.core.groups.Tuple.tuple(liquidacaoL1Id, "LIQUIDACAO", true));
+        .extracting(ExtratoLiquidacaoLinha::id)
+        .doesNotContain(liquidacaoL1Id);
+  }
+
+  @Test
+  void buscar_linhaDeEstorno_trazReferenciaDaLiquidacaoOriginal() {
+    var filtro = new ExtratoLiquidacaoFiltro(null, null, null, null, null, 0, 20);
+
+    var resultado = extratoLiquidacaoRepository.buscar(filtro);
+
+    var estorno = resultado.content().get(0);
+    assertThat(estorno.id()).isEqualTo(estornoE1Id);
+    assertThat(estorno.liquidacaoEstornadaId()).isEqualTo(liquidacaoL1Id);
+    assertThat(estorno.liquidacaoEstornadaCriadoEm())
+        .isEqualTo(Instant.parse("2026-01-10T00:00:00Z"));
+    // liquidações não apontam pra ninguém
+    assertThat(resultado.content().get(1).liquidacaoEstornadaId()).isNull();
+  }
+
+  @Test
+  void buscar_filtrandoPorTipo_retornaSoAqueleTipo() {
+    var soEstornos =
+        extratoLiquidacaoRepository.buscar(
+            new ExtratoLiquidacaoFiltro(null, null, "ESTORNO", null, null, 0, 20));
+    var soLiquidacoes =
+        extratoLiquidacaoRepository.buscar(
+            new ExtratoLiquidacaoFiltro(null, null, "LIQUIDACAO", null, null, 0, 20));
+
+    assertThat(soEstornos.content())
+        .extracting(ExtratoLiquidacaoLinha::id)
+        .containsExactly(estornoE1Id);
+    assertThat(soLiquidacoes.totalElements()).isEqualTo(2);
+    assertThat(soLiquidacoes.content()).allMatch(l -> l.tipo().equals("LIQUIDACAO"));
   }
 
   @Test
   void buscar_filtrandoPorCedente_retornaSoAsDaqueleCedente() {
-    var filtro = new ExtratoLiquidacaoFiltro(cedenteA.getId(), null, null, null, 0, 20);
+    var filtro = new ExtratoLiquidacaoFiltro(cedenteA.getId(), null, null, null, null, 0, 20);
 
     var resultado = extratoLiquidacaoRepository.buscar(filtro);
 
-    // cedente A: L1, L3 e o estorno E1 (o estorno herda o cedente da liquidação original).
-    assertThat(resultado.totalElements()).isEqualTo(3);
+    // cedente A: L3 e o estorno E1 (que herda o cedente); L1 estornada fica de fora.
+    assertThat(resultado.totalElements()).isEqualTo(2);
     assertThat(resultado.content())
         .extracting(ExtratoLiquidacaoLinha::id)
-        .containsExactly(estornoE1Id, liquidacaoL3Id, liquidacaoL1Id);
+        .containsExactly(estornoE1Id, liquidacaoL3Id);
     assertThat(resultado.content()).allMatch(l -> l.cedenteId().equals(cedenteA.getId()));
   }
 
   @Test
   void buscar_filtrandoPorMoedaPagamento_retornaSoAquelaMoeda() {
-    var filtro = new ExtratoLiquidacaoFiltro(null, "USD", null, null, 0, 20);
+    var filtro = new ExtratoLiquidacaoFiltro(null, "USD", null, null, null, 0, 20);
 
     var resultado = extratoLiquidacaoRepository.buscar(filtro);
 
@@ -215,6 +240,7 @@ class ExtratoLiquidacaoRepositoryIT {
   void buscar_filtrandoPorPeriodo_dataFimEExclusiva() {
     var filtro =
         new ExtratoLiquidacaoFiltro(
+            null,
             null,
             null,
             Instant.parse("2026-01-15T00:00:00Z"),
@@ -232,13 +258,13 @@ class ExtratoLiquidacaoRepositoryIT {
   void buscar_paginacao_respeitaLimitEOffsetMantendoOrdenacao() {
     var pagina0 =
         extratoLiquidacaoRepository.buscar(
-            new ExtratoLiquidacaoFiltro(null, null, null, null, 0, 1));
+            new ExtratoLiquidacaoFiltro(null, null, null, null, null, 0, 1));
     var pagina1 =
         extratoLiquidacaoRepository.buscar(
-            new ExtratoLiquidacaoFiltro(null, null, null, null, 1, 1));
+            new ExtratoLiquidacaoFiltro(null, null, null, null, null, 1, 1));
 
-    assertThat(pagina0.totalElements()).isEqualTo(4);
-    assertThat(pagina0.totalPages()).isEqualTo(4);
+    assertThat(pagina0.totalElements()).isEqualTo(3);
+    assertThat(pagina0.totalPages()).isEqualTo(3);
     assertThat(pagina0.content())
         .extracting(ExtratoLiquidacaoLinha::id)
         .containsExactly(estornoE1Id);
@@ -249,7 +275,7 @@ class ExtratoLiquidacaoRepositoryIT {
 
   @Test
   void buscar_filtroSemNenhumaCorrespondencia_retornaPaginaVazia() {
-    var filtro = new ExtratoLiquidacaoFiltro(UUID.randomUUID(), null, null, null, 0, 20);
+    var filtro = new ExtratoLiquidacaoFiltro(UUID.randomUUID(), null, null, null, null, 0, 20);
 
     var resultado = extratoLiquidacaoRepository.buscar(filtro);
 
@@ -260,7 +286,7 @@ class ExtratoLiquidacaoRepositoryIT {
 
   @Test
   void buscar_combinandoCedenteEMoeda_intersectaOsFiltros() {
-    var filtro = new ExtratoLiquidacaoFiltro(cedenteA.getId(), "USD", null, null, 0, 20);
+    var filtro = new ExtratoLiquidacaoFiltro(cedenteA.getId(), "USD", null, null, null, 0, 20);
 
     var resultado = extratoLiquidacaoRepository.buscar(filtro);
 
@@ -270,7 +296,7 @@ class ExtratoLiquidacaoRepositoryIT {
 
   @Test
   void buscar_semUso_naoAfetaOutroTeste_cedenteBSoApareceComFiltroDele() {
-    var filtro = new ExtratoLiquidacaoFiltro(cedenteB.getId(), null, null, null, 0, 20);
+    var filtro = new ExtratoLiquidacaoFiltro(cedenteB.getId(), null, null, null, null, 0, 20);
 
     var resultado = extratoLiquidacaoRepository.buscar(filtro);
 

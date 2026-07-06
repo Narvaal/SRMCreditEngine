@@ -8,7 +8,10 @@ import { recebivelFormSchema, type RecebivelFormInput, type RecebivelFormOutput 
 import { RecebivelForm } from './RecebivelForm'
 
 const cedentes: Cedente[] = [{ id: 'c1', nome: 'Acme Ltda', documento: '123' }]
-const tiposRecebivel: TipoRecebivel[] = [{ codigo: 'DUPLICATA_MERCANTIL', nome: 'Duplicata Mercantil' }]
+const tiposRecebivel: TipoRecebivel[] = [
+  { codigo: 'DUPLICATA_MERCANTIL', nome: 'Duplicata Mercantil' },
+  { codigo: 'CHEQUE_PRE_DATADO', nome: 'Cheque Pré-datado' },
+]
 const moedas: Moeda[] = [
   { codigo: 'BRL', nome: 'Real Brasileiro', casasDecimais: 2 },
   { codigo: 'USD', nome: 'Dólar Americano', casasDecimais: 2 },
@@ -19,7 +22,7 @@ function Harness({ isSubmitting = false, onValid = vi.fn() }: { isSubmitting?: b
     resolver: zodResolver(recebivelFormSchema),
     defaultValues: {
       cedenteId: '',
-      tipoRecebivelCodigo: '',
+      tipoRecebivelCodigo: 'DUPLICATA_MERCANTIL',
       valorFace: '' as unknown as number,
       dataVencimento: '',
       moedaTitulo: 'BRL',
@@ -48,18 +51,52 @@ describe('RecebivelForm', () => {
     expect(screen.getAllByRole('option', { name: 'BRL' }).length).toBeGreaterThan(0)
   })
 
+  it('tipo de recebível não tem placeholder — abre já com Duplicata Mercantil selecionada', () => {
+    render(<Harness />)
+
+    const select = screen.getByLabelText('Tipo de recebível')
+    expect(select).toHaveValue('DUPLICATA_MERCANTIL')
+    expect(select.querySelectorAll('option')).toHaveLength(2)
+  })
+
   it('submeter com campos obrigatórios vazios mostra erros de validação e não chama onValid', async () => {
     const onValid = vi.fn()
     render(<Harness onValid={onValid} />)
 
     await userEvent.click(screen.getByRole('button', { name: /liquidar recebível/i }))
 
-    expect(await screen.findByText('Selecione um cedente')).toBeInTheDocument()
-    expect(screen.getByText('Selecione o tipo')).toBeInTheDocument()
-    // valorFace vazio coage pra 0 via z.coerce.number — cai na validação .positive(), não na de tipo.
-    expect(screen.getByText('O valor deve ser maior que zero')).toBeInTheDocument()
-    expect(screen.getByText('Informe o vencimento')).toBeInTheDocument()
+    expect(await screen.findByText('Selecione um cedente.')).toBeInTheDocument()
+    expect(screen.getByText('Informe um valor.')).toBeInTheDocument()
+    expect(screen.getByText('Informe o vencimento.')).toBeInTheDocument()
     expect(onValid).not.toHaveBeenCalled()
+  })
+
+  it('valor de face é campo de texto decimal — o input numérico nativo descartaria a vírgula digitada', () => {
+    render(<Harness />)
+
+    const campo = screen.getByLabelText('Valor de face')
+    expect(campo).toHaveAttribute('type', 'text')
+    expect(campo).toHaveAttribute('inputmode', 'decimal')
+  })
+
+  it('valor de face aplica pontos de milhar automaticamente na digitação', async () => {
+    render(<Harness />)
+
+    const campo = screen.getByLabelText('Valor de face')
+    await userEvent.type(campo, '1234567,89')
+
+    expect(campo).toHaveValue('1.234.567,89')
+  })
+
+  it('valor de face mostra o símbolo da moeda do título e acompanha a troca de moeda', async () => {
+    render(<Harness />)
+
+    expect(screen.getByText('R$')).toBeInTheDocument()
+
+    await userEvent.selectOptions(screen.getByLabelText('Moeda do título'), 'USD')
+
+    expect(screen.getByText('US$')).toBeInTheDocument()
+    expect(screen.queryByText('R$')).not.toBeInTheDocument()
   })
 
   it('isSubmitting desabilita o botão e troca o texto', () => {

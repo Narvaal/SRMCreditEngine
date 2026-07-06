@@ -19,6 +19,7 @@ describe('useExtratoFiltrosUrlState', () => {
     expect(result.current.filtrosUrl).toEqual({
       cedenteId: '',
       moeda: '',
+      tipo: '',
       dataInicio: '',
       dataFim: '',
       page: 0,

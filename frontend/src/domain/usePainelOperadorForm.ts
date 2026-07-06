@@ -23,9 +23,13 @@ const CAMPOS_PRECIFICACAO = ['tipoRecebivelCodigo', 'valorFace', 'dataVencimento
 export function usePainelOperadorForm() {
   const form = useForm<RecebivelFormInput, unknown, RecebivelFormOutput>({
     resolver: zodResolver(recebivelFormSchema),
+    // onTouched: o erro aparece assim que o operador sai do campo, casando com o aviso
+    // em tempo real do painel de resultado (que não depende de submit).
+    mode: 'onTouched',
     defaultValues: {
       cedenteId: '',
-      tipoRecebivelCodigo: '',
+      // Duplicata Mercantil é o recebível mais comum na mesa — default em vez de placeholder vazio.
+      tipoRecebivelCodigo: 'DUPLICATA_MERCANTIL',
       valorFace: '' as unknown as number,
       dataVencimento: '',
       moedaTitulo: 'BRL',
@@ -36,17 +40,27 @@ export function usePainelOperadorForm() {
   const camposObservados = form.watch(CAMPOS_PRECIFICACAO)
   const camposComAtraso = useDebouncedValue(camposObservados, DEBOUNCE_MS)
 
-  const requestSimulacao = useMemo(() => {
+  const { requestSimulacao, camposComFalha } = useMemo(() => {
     const [tipoRecebivelCodigo, valorFace, dataVencimento, moedaTitulo, moedaPagamento] = camposComAtraso
-    const resultado = camposPrecificacaoSchema.safeParse({
-      tipoRecebivelCodigo,
-      valorFace,
-      dataVencimento,
-      moedaTitulo,
-      moedaPagamento,
-    })
-    return resultado.success ? resultado.data : null
+    const valores = { tipoRecebivelCodigo, valorFace, dataVencimento, moedaTitulo, moedaPagamento }
+    const resultado = camposPrecificacaoSchema.safeParse(valores)
+    if (resultado.success) {
+      return { requestSimulacao: resultado.data, camposComFalha: [] as string[] }
+    }
+    // Campo vazio é formulário incompleto ("preencha..."); campo preenchido que falhou é erro
+    // de verdade — o painel de resultado avisa em vez de fingir que só falta preencher.
+    const campoPreenchido = (campo: string) => {
+      const valor = valores[campo as keyof typeof valores]
+      return valor !== undefined && valor !== null && String(valor) !== ''
+    }
+    const falhas = resultado.error.issues.map((issue) => String(issue.path[0])).filter(campoPreenchido)
+    return { requestSimulacao: null, camposComFalha: falhas }
   }, [camposComAtraso])
+
+  // O aviso do painel só acompanha erros que o operador já está vendo no campo (onTouched) —
+  // sem isso ele apareceria antes do destaque, apontando pra um erro ainda invisível.
+  const { errors } = form.formState
+  const simulacaoComErro = camposComFalha.some((campo) => campo in errors)
 
   const simulacao = useSimulacaoRecebivel(requestSimulacao)
 
@@ -75,6 +89,7 @@ export function usePainelOperadorForm() {
     form,
     simulacao,
     simulacaoPronta: requestSimulacao !== null,
+    simulacaoComErro,
     onSubmit,
     isSubmitting: envioMutation.isPending,
     resultadoEnvio,

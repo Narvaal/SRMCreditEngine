@@ -24,11 +24,13 @@ public class ExtratoLiquidacaoController {
   public ResponseEntity<PaginaResponse<ExtratoLiquidacaoLinha>> buscar(
       @RequestParam(required = false) UUID cedenteId,
       @RequestParam(required = false) String moeda,
+      @RequestParam(required = false) String tipo,
       @RequestParam(required = false) Instant dataInicio,
       @RequestParam(required = false) Instant dataFim,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "20") int size) {
-    var filtro = new ExtratoLiquidacaoFiltro(cedenteId, moeda, dataInicio, dataFim, page, size);
+    var filtro =
+        new ExtratoLiquidacaoFiltro(cedenteId, moeda, tipo, dataInicio, dataFim, page, size);
     return ResponseEntity.ok(extratoLiquidacaoRepository.buscar(filtro));
   }
 }

@@ -34,9 +34,11 @@ class ExtratoLiquidacaoControllerTest {
         "BRL",
         "BRL",
         new BigDecimal("1000.00"),
+        new BigDecimal("975.609756"),
         new BigDecimal("975.61"),
         Instant.parse("2026-07-01T00:00:00Z"),
-        false);
+        null,
+        null);
   }
 
   @Test
@@ -50,8 +52,7 @@ class ExtratoLiquidacaoControllerTest {
         .andExpect(jsonPath("$.page").value(0))
         .andExpect(jsonPath("$.size").value(20))
         .andExpect(jsonPath("$.totalElements").value(1))
-        .andExpect(jsonPath("$.content[0].cedenteNome").value("Acme Ltda"))
-        .andExpect(jsonPath("$.content[0].estornada").value(false));
+        .andExpect(jsonPath("$.content[0].cedenteNome").value("Acme Ltda"));
   }
 
   @Test
@@ -61,6 +62,7 @@ class ExtratoLiquidacaoControllerTest {
             new ExtratoLiquidacaoFiltro(
                 cedenteId,
                 "USD",
+                "ESTORNO",
                 Instant.parse("2026-01-01T00:00:00Z"),
                 Instant.parse("2026-02-01T00:00:00Z"),
                 2,
@@ -72,6 +74,7 @@ class ExtratoLiquidacaoControllerTest {
             get("/api/relatorios/extrato-liquidacao")
                 .param("cedenteId", cedenteId.toString())
                 .param("moeda", "USD")
+                .param("tipo", "ESTORNO")
                 .param("dataInicio", "2026-01-01T00:00:00Z")
                 .param("dataFim", "2026-02-01T00:00:00Z")
                 .param("page", "2")

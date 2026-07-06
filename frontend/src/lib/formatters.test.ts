@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { calcularDesagioPercentual, fimDoDiaSeguinteISO, formatarMoeda, inicioDoDiaISO } from './formatters'
+import {
+  calcularDesagioPercentual,
+  fimDoDiaSeguinteISO,
+  formatarMoeda,
+  inicioDoDiaISO,
+  mascararValorBR,
+  simboloMoeda,
+} from './formatters'
 
 describe('formatarMoeda', () => {
   it('formata em BRL', () => {
@@ -8,6 +15,40 @@ describe('formatarMoeda', () => {
 
   it('formata em USD', () => {
     expect(formatarMoeda(875.46, 'USD')).toContain('875,46')
+  })
+})
+
+describe('mascararValorBR', () => {
+  it('insere pontos de milhar automaticamente conforme a digitação', () => {
+    expect(mascararValorBR('1234')).toBe('1.234')
+    expect(mascararValorBR('1234567')).toBe('1.234.567')
+    expect(mascararValorBR('1234567,89')).toBe('1.234.567,89')
+  })
+
+  it('reformata um valor já mascarado sem duplicar pontos', () => {
+    expect(mascararValorBR('1.2345')).toBe('12.345')
+    expect(mascararValorBR('1.000,5')).toBe('1.000,5')
+  })
+
+  it('trata ponto digitado em posição decimal como vírgula (teclado numérico)', () => {
+    expect(mascararValorBR('500.03')).toBe('500,03')
+    expect(mascararValorBR('1.000.')).toBe('1.000,')
+  })
+
+  it('não trunca casas decimais em excesso — o erro fica por conta da validação', () => {
+    expect(mascararValorBR('0,010000000')).toBe('0,010000000')
+  })
+
+  it('descarta caracteres não numéricos e vírgulas extras', () => {
+    expect(mascararValorBR('12a34')).toBe('1.234')
+    expect(mascararValorBR('1,2,3')).toBe('1,23')
+  })
+})
+
+describe('simboloMoeda', () => {
+  it('extrai o símbolo pt-BR da moeda', () => {
+    expect(simboloMoeda('BRL')).toBe('R$')
+    expect(simboloMoeda('USD')).toBe('US$')
   })
 })
 

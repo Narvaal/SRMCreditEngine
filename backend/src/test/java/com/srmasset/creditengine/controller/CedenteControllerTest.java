@@ -33,14 +33,16 @@ class CedenteControllerTest {
   @Test
   void criar_caminhoFeliz_retorna200() throws Exception {
     UUID id = UUID.randomUUID();
-    Cedente cedente = Cedente.builder().id(id).nome("Acme Ltda").documento("123").build();
+    Cedente cedente = Cedente.builder().id(id).nome("Acme Ltda").documento("52998224725").build();
     when(cedenteService.criar(any())).thenReturn(cedente);
 
     mockMvc
         .perform(
             post("/api/cedentes")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(new CedenteRequest("Acme Ltda", "123"))))
+                .content(
+                    objectMapper.writeValueAsString(
+                        new CedenteRequest("Acme Ltda", "52998224725"))))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.id").value(id.toString()))
         .andExpect(jsonPath("$.nome").value("Acme Ltda"));
@@ -48,13 +50,15 @@ class CedenteControllerTest {
 
   @Test
   void criar_documentoDuplicado_retorna409() throws Exception {
-    when(cedenteService.criar(any())).thenThrow(new CedenteDuplicadoException("123"));
+    when(cedenteService.criar(any())).thenThrow(new CedenteDuplicadoException("52998224725"));
 
     mockMvc
         .perform(
             post("/api/cedentes")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(new CedenteRequest("Acme Ltda", "123"))))
+                .content(
+                    objectMapper.writeValueAsString(
+                        new CedenteRequest("Acme Ltda", "52998224725"))))
         .andExpect(status().isConflict())
         .andExpect(jsonPath("$.codigo").value("CEDENTE_DUPLICADO"));
   }
@@ -65,7 +69,35 @@ class CedenteControllerTest {
         .perform(
             post("/api/cedentes")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(new CedenteRequest("", "123"))))
+                .content(objectMapper.writeValueAsString(new CedenteRequest("", "52998224725"))))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.camposInvalidos[0].campo").value("nome"));
+  }
+
+  @Test
+  void criar_documentoComDigitoVerificadorErrado_retorna400ComCampoDetalhado() throws Exception {
+    mockMvc
+        .perform(
+            post("/api/cedentes")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    objectMapper.writeValueAsString(
+                        new CedenteRequest("Acme Ltda", "52998224726"))))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.camposInvalidos[0].campo").value("documento"))
+        .andExpect(
+            jsonPath("$.camposInvalidos[0].mensagem").value("Informe um CPF ou CNPJ válido."));
+  }
+
+  @Test
+  void criar_nomeComCaractereEspecial_retorna400() throws Exception {
+    mockMvc
+        .perform(
+            post("/api/cedentes")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    objectMapper.writeValueAsString(
+                        new CedenteRequest("Acme & Cia", "52998224725"))))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.camposInvalidos[0].campo").value("nome"));
   }
@@ -73,7 +105,7 @@ class CedenteControllerTest {
   @Test
   void buscarPorId_existente_retorna200() throws Exception {
     UUID id = UUID.randomUUID();
-    Cedente cedente = Cedente.builder().id(id).nome("Acme Ltda").documento("123").build();
+    Cedente cedente = Cedente.builder().id(id).nome("Acme Ltda").documento("52998224725").build();
     when(cedenteService.buscarPorId(id)).thenReturn(cedente);
 
     mockMvc.perform(get("/api/cedentes/{id}", id)).andExpect(status().isOk());
@@ -93,7 +125,7 @@ class CedenteControllerTest {
   @Test
   void listar_retornaListaDoService() throws Exception {
     Cedente cedente =
-        Cedente.builder().id(UUID.randomUUID()).nome("Acme Ltda").documento("123").build();
+        Cedente.builder().id(UUID.randomUUID()).nome("Acme Ltda").documento("52998224725").build();
     when(cedenteService.listarTodos()).thenReturn(List.of(cedente));
 
     mockMvc

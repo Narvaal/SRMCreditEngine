@@ -13,6 +13,13 @@ public record ExtratoLiquidacaoLinha(
     String moedaTitulo,
     String moedaPagamento,
     BigDecimal valorFace,
+    /** Na moeda do título — base correta pra taxa de deságio mesmo em operação cross-currency. */
+    BigDecimal valorPresente,
     BigDecimal valorLiquido,
     Instant criadoEm,
-    boolean estornada) {}
+    /**
+     * Preenchidos só em linhas ESTORNO: referência da liquidação desfeita (o frontend funde as
+     * duas). Liquidações já estornadas não aparecem no extrato — a linha do estorno as representa.
+     */
+    UUID liquidacaoEstornadaId,
+    Instant liquidacaoEstornadaCriadoEm) {}

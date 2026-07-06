@@ -19,6 +19,13 @@ function wrapper({ children }: { children: ReactNode }) {
   return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
 }
 
+const CPF_VALIDO_DIGITADO = '52998224725'
+const CPF_VALIDO_MASCARADO = '529.982.247-25'
+
+async function expandirFormulario(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole('button', { name: /cadastrar novo cedente/i }))
+}
+
 describe('CadastroCedenteInline', () => {
   it('começa colapsado e expande ao clicar', async () => {
     render(<CadastroCedenteInline onCriado={vi.fn()} />, { wrapper })
@@ -26,35 +33,82 @@ describe('CadastroCedenteInline', () => {
 
     expect(screen.queryByLabelText('Nome')).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: /cadastrar novo cedente/i }))
+    await expandirFormulario(user)
 
     expect(screen.getByLabelText('Nome')).toBeInTheDocument()
     expect(screen.getByLabelText('Documento')).toBeInTheDocument()
   })
 
-  it('valida campos obrigatórios antes de chamar a API', async () => {
+  it('aplica a máscara de CPF e de CNPJ conforme a digitação', async () => {
     render(<CadastroCedenteInline onCriado={vi.fn()} />, { wrapper })
     const user = userEvent.setup()
 
-    await user.click(screen.getByRole('button', { name: /cadastrar novo cedente/i }))
+    await expandirFormulario(user)
+    const campoDocumento = screen.getByLabelText('Documento')
+
+    await user.type(campoDocumento, CPF_VALIDO_DIGITADO)
+    expect(campoDocumento).toHaveValue(CPF_VALIDO_MASCARADO)
+
+    await user.clear(campoDocumento)
+    await user.type(campoDocumento, '11444777000161')
+    expect(campoDocumento).toHaveValue('11.444.777/0001-61')
+  })
+
+  it('valida os campos antes de chamar a API', async () => {
+    render(<CadastroCedenteInline onCriado={vi.fn()} />, { wrapper })
+    const user = userEvent.setup()
+
+    await expandirFormulario(user)
     await user.click(screen.getByRole('button', { name: 'Cadastrar' }))
 
-    expect(await screen.findByText(/informe nome e documento/i)).toBeInTheDocument()
+    expect(await screen.findByText(/razão social de 3 a 20 caracteres/i)).toBeInTheDocument()
+    expect(screen.getByText(/informe um cpf ou cnpj válido/i)).toBeInTheDocument()
     expect(cedentesApi.criar).not.toHaveBeenCalled()
   })
 
-  it('sucesso colapsa, limpa os campos e devolve o id pro chamador', async () => {
-    vi.mocked(cedentesApi.criar).mockResolvedValue({ id: 'novo-1', nome: 'Nova Ltda', documento: '999' })
+  it('rejeita CPF com dígito verificador errado', async () => {
+    render(<CadastroCedenteInline onCriado={vi.fn()} />, { wrapper })
+    const user = userEvent.setup()
+
+    await expandirFormulario(user)
+    await user.type(screen.getByLabelText('Nome'), 'Nova Ltda')
+    await user.type(screen.getByLabelText('Documento'), '52998224726')
+    await user.click(screen.getByRole('button', { name: 'Cadastrar' }))
+
+    expect(await screen.findByText('Informe um CPF válido.')).toBeInTheDocument()
+    expect(cedentesApi.criar).not.toHaveBeenCalled()
+  })
+
+  it('rejeita razão social com caracteres especiais', async () => {
+    render(<CadastroCedenteInline onCriado={vi.fn()} />, { wrapper })
+    const user = userEvent.setup()
+
+    await expandirFormulario(user)
+    await user.type(screen.getByLabelText('Nome'), 'Nova & Cia')
+    await user.type(screen.getByLabelText('Documento'), CPF_VALIDO_DIGITADO)
+    await user.click(screen.getByRole('button', { name: 'Cadastrar' }))
+
+    expect(await screen.findByText(/use apenas letras, números e espaços/i)).toBeInTheDocument()
+    expect(cedentesApi.criar).not.toHaveBeenCalled()
+  })
+
+  it('sucesso envia o documento sem máscara, colapsa e devolve o id pro chamador', async () => {
+    vi.mocked(cedentesApi.criar).mockResolvedValue({
+      id: 'novo-1',
+      nome: 'Nova Ltda',
+      documento: CPF_VALIDO_DIGITADO,
+    })
     const onCriado = vi.fn()
     render(<CadastroCedenteInline onCriado={onCriado} />, { wrapper })
     const user = userEvent.setup()
 
-    await user.click(screen.getByRole('button', { name: /cadastrar novo cedente/i }))
+    await expandirFormulario(user)
     await user.type(screen.getByLabelText('Nome'), 'Nova Ltda')
-    await user.type(screen.getByLabelText('Documento'), '999')
+    await user.type(screen.getByLabelText('Documento'), CPF_VALIDO_DIGITADO)
     await user.click(screen.getByRole('button', { name: 'Cadastrar' }))
 
     await waitFor(() => expect(onCriado).toHaveBeenCalledWith('novo-1'))
+    expect(cedentesApi.criar).toHaveBeenCalledWith({ nome: 'Nova Ltda', documento: CPF_VALIDO_DIGITADO })
     expect(screen.queryByLabelText('Nome')).not.toBeInTheDocument()
   })
 
@@ -64,7 +118,7 @@ describe('CadastroCedenteInline', () => {
         timestamp: '2026-07-04T12:00:00Z',
         status: 409,
         codigo: 'CEDENTE_DUPLICADO',
-        mensagem: 'Já existe um cedente cadastrado com o documento: 999',
+        mensagem: `Já existe um cedente cadastrado com o documento: ${CPF_VALIDO_DIGITADO}`,
         path: '/api/cedentes',
         camposInvalidos: [],
       }),
@@ -73,13 +127,36 @@ describe('CadastroCedenteInline', () => {
     render(<CadastroCedenteInline onCriado={onCriado} />, { wrapper })
     const user = userEvent.setup()
 
-    await user.click(screen.getByRole('button', { name: /cadastrar novo cedente/i }))
+    await expandirFormulario(user)
     await user.type(screen.getByLabelText('Nome'), 'Nova Ltda')
-    await user.type(screen.getByLabelText('Documento'), '999')
+    await user.type(screen.getByLabelText('Documento'), CPF_VALIDO_DIGITADO)
     await user.click(screen.getByRole('button', { name: 'Cadastrar' }))
 
     expect(await screen.findByText(/já existe um cedente cadastrado/i)).toBeInTheDocument()
     expect(onCriado).not.toHaveBeenCalled()
     expect(screen.getByLabelText('Nome')).toBeInTheDocument()
+  })
+
+  it('erros de bean-validation do backend (camposInvalidos) aparecem no campo correspondente', async () => {
+    vi.mocked(cedentesApi.criar).mockRejectedValue(
+      new ApiError({
+        timestamp: '2026-07-04T12:00:00Z',
+        status: 400,
+        codigo: 'REQUEST_INVALIDO',
+        mensagem: 'Payload inválido',
+        path: '/api/cedentes',
+        camposInvalidos: [{ campo: 'documento', mensagem: 'Informe um CPF ou CNPJ válido.' }],
+      }),
+    )
+    render(<CadastroCedenteInline onCriado={vi.fn()} />, { wrapper })
+    const user = userEvent.setup()
+
+    await expandirFormulario(user)
+    await user.type(screen.getByLabelText('Nome'), 'Nova Ltda')
+    await user.type(screen.getByLabelText('Documento'), CPF_VALIDO_DIGITADO)
+    await user.click(screen.getByRole('button', { name: 'Cadastrar' }))
+
+    expect(await screen.findByText('Informe um CPF ou CNPJ válido.')).toBeInTheDocument()
+    expect(screen.queryByText('Payload inválido')).not.toBeInTheDocument()
   })
 })
