@@ -8,6 +8,7 @@ const SIZE_PADRAO = 20
 export interface FiltrosUrlState {
   cedenteId: string
   moeda: string
+  tipo: string // '' | 'LIQUIDACAO' | 'ESTORNO'
   dataInicio: string // yyyy-MM-dd cru, direto do <input type="date">
   dataFim: string
   page: number
@@ -28,6 +29,7 @@ export function useExtratoFiltrosUrlState() {
     () => ({
       cedenteId: searchParams.get('cedenteId') ?? '',
       moeda: searchParams.get('moeda') ?? '',
+      tipo: searchParams.get('tipo') ?? '',
       dataInicio: searchParams.get('dataInicio') ?? '',
       dataFim: searchParams.get('dataFim') ?? '',
       page: Number(searchParams.get('page') ?? '0'),
@@ -64,6 +66,7 @@ export function useExtratoFiltrosUrlState() {
     () => ({
       cedenteId: filtrosUrl.cedenteId || undefined,
       moeda: filtrosUrl.moeda || undefined,
+      tipo: filtrosUrl.tipo || undefined,
       dataInicio: filtrosUrl.dataInicio ? inicioDoDiaISO(filtrosUrl.dataInicio) : undefined,
       dataFim: filtrosUrl.dataFim ? fimDoDiaSeguinteISO(filtrosUrl.dataFim) : undefined,
       page: filtrosUrl.page,

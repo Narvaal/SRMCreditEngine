@@ -15,6 +15,7 @@ describe('FiltrosTransacoes', () => {
     const onChange = vi.fn()
     render(
       <FiltrosTransacoes
+        tipo=""
         cedenteId=""
         moeda=""
         dataInicio=""
@@ -34,6 +35,7 @@ describe('FiltrosTransacoes', () => {
     const onChange = vi.fn()
     render(
       <FiltrosTransacoes
+        tipo=""
         cedenteId=""
         moeda=""
         dataInicio=""
@@ -49,10 +51,31 @@ describe('FiltrosTransacoes', () => {
     expect(onChange).toHaveBeenCalledWith({ moeda: 'USD' })
   })
 
+  it('selecionar um tipo chama onChange só com tipo', async () => {
+    const onChange = vi.fn()
+    render(
+      <FiltrosTransacoes
+        tipo=""
+        cedenteId=""
+        moeda=""
+        dataInicio=""
+        dataFim=""
+        cedentes={cedentes}
+        moedas={moedas}
+        onChange={onChange}
+      />,
+    )
+
+    await userEvent.selectOptions(screen.getByLabelText('Tipo'), 'ESTORNO')
+
+    expect(onChange).toHaveBeenCalledWith({ tipo: 'ESTORNO' })
+  })
+
   it('alterar a data "De" chama onChange só com dataInicio', () => {
     const onChange = vi.fn()
     render(
       <FiltrosTransacoes
+        tipo=""
         cedenteId=""
         moeda=""
         dataInicio=""
@@ -73,6 +96,7 @@ describe('FiltrosTransacoes', () => {
     const onChange = vi.fn()
     render(
       <FiltrosTransacoes
+        tipo=""
         cedenteId=""
         moeda=""
         dataInicio=""
@@ -92,6 +116,7 @@ describe('FiltrosTransacoes', () => {
   it('renderiza "Todos"/"Todas" como opção default e as opções recebidas via props', () => {
     render(
       <FiltrosTransacoes
+        tipo=""
         cedenteId=""
         moeda=""
         dataInicio=""
@@ -102,8 +127,10 @@ describe('FiltrosTransacoes', () => {
       />,
     )
 
-    expect(screen.getByRole('option', { name: 'Todos' })).toBeInTheDocument()
+    // "Todos" aparece em Cedente e em Tipo
+    expect(screen.getAllByRole('option', { name: 'Todos' })).toHaveLength(2)
     expect(screen.getByRole('option', { name: 'Todas' })).toBeInTheDocument()
     expect(screen.getByRole('option', { name: 'Acme Ltda' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'Estorno' })).toBeInTheDocument()
   })
 })

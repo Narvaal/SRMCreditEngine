@@ -16,6 +16,8 @@ const linha: ExtratoLiquidacaoLinha = {
   valorLiquido: 900,
   criadoEm: '2026-07-03T12:00:00Z',
   estornada: false,
+  liquidacaoEstornadaId: null,
+  liquidacaoEstornadaCriadoEm: null,
 }
 
 function renderModal(props: Partial<Parameters<typeof EstornoModal>[0]> = {}) {

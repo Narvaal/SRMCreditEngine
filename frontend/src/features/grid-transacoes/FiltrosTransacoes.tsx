@@ -11,9 +11,18 @@ interface FiltrosTransacoesProps extends FiltrosEditaveis {
 }
 
 /** Componente puro: recebe os valores atuais e um callback — não sabe que a URL existe. */
-export function FiltrosTransacoes({ cedenteId, moeda, dataInicio, dataFim, cedentes, moedas, onChange }: FiltrosTransacoesProps) {
+export function FiltrosTransacoes({
+  cedenteId,
+  moeda,
+  tipo,
+  dataInicio,
+  dataFim,
+  cedentes,
+  moedas,
+  onChange,
+}: FiltrosTransacoesProps) {
   return (
-    <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+    <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
       <Select name="cedenteId" label="Cedente" value={cedenteId} onChange={(e) => onChange({ cedenteId: e.target.value })}>
         <option value="">Todos</option>
         {cedentes.map((cedente) => (
@@ -21,6 +30,12 @@ export function FiltrosTransacoes({ cedenteId, moeda, dataInicio, dataFim, ceden
             {cedente.nome}
           </option>
         ))}
+      </Select>
+
+      <Select name="tipo" label="Tipo" value={tipo} onChange={(e) => onChange({ tipo: e.target.value })}>
+        <option value="">Todos</option>
+        <option value="LIQUIDACAO">Liquidação</option>
+        <option value="ESTORNO">Estorno</option>
       </Select>
 
       <Select name="moeda" label="Moeda" value={moeda} onChange={(e) => onChange({ moeda: e.target.value })}>

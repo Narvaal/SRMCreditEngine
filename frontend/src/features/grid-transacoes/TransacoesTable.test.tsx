@@ -17,6 +17,8 @@ const linhaBase: ExtratoLiquidacaoLinha = {
   valorLiquido: 900,
   criadoEm: '2026-07-03T12:00:00Z',
   estornada: false,
+  liquidacaoEstornadaId: null,
+  liquidacaoEstornadaCriadoEm: null,
 }
 
 function paraTabela(linhas: ExtratoLiquidacaoLinha[]) {
@@ -96,6 +98,8 @@ describe('TransacoesTable', () => {
       valorFace: 222.22,
       valorLiquido: 182.92,
       criadoEm: '2026-07-07T09:14:00Z',
+      liquidacaoEstornadaId: 'liq',
+      liquidacaoEstornadaCriadoEm: linhaBase.criadoEm,
     }
     render(<TransacoesTable transacoes={paraTabela([estorno, liquidacao])} onEstornar={vi.fn()} />)
 
@@ -115,7 +119,7 @@ describe('TransacoesTable', () => {
     expect(screen.queryByText('Operação original')).not.toBeInTheDocument()
   })
 
-  it('liquidações comuns e estornos sem par na página não têm seta de expandir', () => {
+  it('liquidações comuns e estornos legados sem referência não têm seta de expandir', () => {
     render(
       <TransacoesTable
         transacoes={paraTabela([linhaBase, { ...linhaBase, id: 'est-solo', recebivelId: 'r-solo', tipo: 'ESTORNO' }])}
@@ -126,14 +130,28 @@ describe('TransacoesTable', () => {
     expect(screen.queryByRole('button', { name: /operação original/i })).not.toBeInTheDocument()
   })
 
+  it('estorno com referência mas sem a liquidação na página continua expansível', async () => {
+    const estorno = {
+      ...linhaBase,
+      id: 'est-cross',
+      tipo: 'ESTORNO' as const,
+      liquidacaoEstornadaId: 'liq-outra-pagina',
+      liquidacaoEstornadaCriadoEm: '2026-07-01T08:00:00Z',
+    }
+    render(<TransacoesTable transacoes={paraTabela([estorno])} onEstornar={vi.fn()} />)
+
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Exibir operação original' }))
+    expect(screen.getByText('Operação original')).toBeInTheDocument()
+  })
+
   it('apenas uma linha fica expandida por vez', async () => {
     const par1 = [
       { ...linhaBase, id: 'liq1', recebivelId: 'ra', estornada: true },
-      { ...linhaBase, id: 'est1', recebivelId: 'ra', tipo: 'ESTORNO' as const, criadoEm: '2026-07-04T10:00:00Z' },
+      { ...linhaBase, id: 'est1', recebivelId: 'ra', tipo: 'ESTORNO' as const, liquidacaoEstornadaId: 'liq1' },
     ]
     const par2 = [
       { ...linhaBase, id: 'liq2', recebivelId: 'rb', estornada: true },
-      { ...linhaBase, id: 'est2', recebivelId: 'rb', tipo: 'ESTORNO' as const, criadoEm: '2026-07-04T11:00:00Z' },
+      { ...linhaBase, id: 'est2', recebivelId: 'rb', tipo: 'ESTORNO' as const, liquidacaoEstornadaId: 'liq2' },
     ]
     render(<TransacoesTable transacoes={paraTabela([...par1, ...par2])} onEstornar={vi.fn()} />)
     const user = userEvent.setup()

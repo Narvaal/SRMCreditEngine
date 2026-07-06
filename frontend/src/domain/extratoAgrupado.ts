@@ -3,61 +3,44 @@ import type { ExtratoLiquidacaoLinha } from '../api/types'
 export interface TransacaoAgrupada {
   /** Linha mostrada na tabela — pro estorno, data/tipo do estorno com os dados da liquidação. */
   exibida: ExtratoLiquidacaoLinha
-  /** Liquidação que originou o estorno — presente só quando ela veio na mesma página. */
+  /** Liquidação que originou o estorno — presente em todo estorno. */
   original?: ExtratoLiquidacaoLinha
 }
 
 /**
  * Funde cada ESTORNO com a LIQUIDACAO que ele desfez, pra tabela mostrar uma linha só por
- * operação (estado final). Transformação 100% de frontend — o backend segue devolvendo as duas.
+ * operação (estado final). O vínculo vem do próprio extrato (liquidacaoEstornadaId), então o
+ * pareamento é exato e independe da página em que cada linha caiu:
  *
- * O extrato não traz o vínculo explícito, então o pareamento usa o recebível: um estorno desfaz
- * a liquidação estornada mais recente do mesmo recebível criada antes dele. Quando o par caiu em
- * outra página, cada linha continua aparecendo sozinha — nunca escondemos uma operação sem
- * conseguir mostrar o estado final dela.
+ * - a liquidação estornada some da página quando o estorno dela também está aqui;
+ * - todo estorno é expansível — se a original não veio na página, ela é reconstruída a partir
+ *   da referência (os valores/cedente/moedas do estorno espelham os da liquidação desfeita).
  */
 export function agruparEstornosComOriginal(linhas: ExtratoLiquidacaoLinha[]): TransacaoAgrupada[] {
-  const liquidacoesEstornadasPorRecebivel = new Map<string, ExtratoLiquidacaoLinha[]>()
-  for (const linha of linhas) {
-    if (linha.tipo === 'LIQUIDACAO' && linha.estornada) {
-      const lista = liquidacoesEstornadasPorRecebivel.get(linha.recebivelId) ?? []
-      lista.push(linha)
-      liquidacoesEstornadasPorRecebivel.set(linha.recebivelId, lista)
-    }
-  }
+  const porId = new Map(linhas.map((linha) => [linha.id, linha]))
 
-  const consumidas = new Set<string>()
-  const originalPorEstorno = new Map<string, ExtratoLiquidacaoLinha>()
-  for (const estorno of linhas.filter((linha) => linha.tipo === 'ESTORNO')) {
-    const original = (liquidacoesEstornadasPorRecebivel.get(estorno.recebivelId) ?? [])
-      .filter((liquidacao) => !consumidas.has(liquidacao.id) && liquidacao.criadoEm <= estorno.criadoEm)
-      .reduce<ExtratoLiquidacaoLinha | null>(
-        (maisRecente, atual) => (!maisRecente || atual.criadoEm > maisRecente.criadoEm ? atual : maisRecente),
-        null,
-      )
-    if (original) {
-      consumidas.add(original.id)
-      originalPorEstorno.set(estorno.id, original)
+  const fundidas = new Set<string>()
+  for (const linha of linhas) {
+    if (linha.tipo === 'ESTORNO' && linha.liquidacaoEstornadaId && porId.has(linha.liquidacaoEstornadaId)) {
+      fundidas.add(linha.liquidacaoEstornadaId)
     }
   }
 
   return linhas
-    .filter((linha) => !consumidas.has(linha.id))
+    .filter((linha) => !fundidas.has(linha.id))
     .map((linha) => {
-      const original = originalPorEstorno.get(linha.id)
-      if (!original) return { exibida: linha }
-      return {
-        // data e tipo do estorno; cedente, moedas e valores da liquidação original
-        exibida: {
-          ...linha,
-          cedenteId: original.cedenteId,
-          cedenteNome: original.cedenteNome,
-          moedaTitulo: original.moedaTitulo,
-          moedaPagamento: original.moedaPagamento,
-          valorFace: original.valorFace,
-          valorLiquido: original.valorLiquido,
-        },
-        original,
+      if (linha.tipo !== 'ESTORNO' || !linha.liquidacaoEstornadaId) {
+        return { exibida: linha }
       }
+      const original: ExtratoLiquidacaoLinha = porId.get(linha.liquidacaoEstornadaId) ?? {
+        ...linha,
+        id: linha.liquidacaoEstornadaId,
+        tipo: 'LIQUIDACAO',
+        criadoEm: linha.liquidacaoEstornadaCriadoEm ?? linha.criadoEm,
+        estornada: true,
+        liquidacaoEstornadaId: null,
+        liquidacaoEstornadaCriadoEm: null,
+      }
+      return { exibida: linha, original }
     })
 }

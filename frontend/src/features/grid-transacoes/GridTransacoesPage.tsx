@@ -54,6 +54,7 @@ export function GridTransacoesPage() {
         <FiltrosTransacoes
           cedenteId={filtrosUrl.cedenteId}
           moeda={filtrosUrl.moeda}
+          tipo={filtrosUrl.tipo}
           dataInicio={filtrosUrl.dataInicio}
           dataFim={filtrosUrl.dataFim}
           cedentes={cedentesQuery.data ?? []}

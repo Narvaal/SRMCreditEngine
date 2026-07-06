@@ -32,6 +32,8 @@ function paginaCom(...nomes: string[]): PaginaResponse<ExtratoLiquidacaoLinha> {
     valorLiquido: 900,
     criadoEm: '2026-07-01T00:00:00Z',
     estornada: false,
+    liquidacaoEstornadaId: null,
+    liquidacaoEstornadaCriadoEm: null,
   }))
   return { content, page: 0, size: 20, totalElements: content.length, totalPages: content.length > 0 ? 2 : 0 }
 }

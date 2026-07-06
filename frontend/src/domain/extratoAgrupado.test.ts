@@ -15,39 +15,28 @@ function linha(sobrescreve: Partial<ExtratoLiquidacaoLinha>): ExtratoLiquidacaoL
     valorLiquido: 900,
     criadoEm: '2026-07-01T10:00:00Z',
     estornada: false,
+    liquidacaoEstornadaId: null,
+    liquidacaoEstornadaCriadoEm: null,
     ...sobrescreve,
   }
 }
 
 describe('agruparEstornosComOriginal', () => {
-  it('funde estorno + liquidação estornada do mesmo recebível numa linha só', () => {
-    const liquidacao = linha({ id: 'liq', estornada: true, criadoEm: '2026-07-01T10:00:00Z' })
-    const estorno = linha({ id: 'est', tipo: 'ESTORNO', criadoEm: '2026-07-02T09:00:00Z' })
+  it('funde estorno + liquidação referenciada numa linha só, na posição do estorno', () => {
+    const liquidacao = linha({ id: 'liq', estornada: true })
+    const estorno = linha({
+      id: 'est',
+      tipo: 'ESTORNO',
+      criadoEm: '2026-07-02T09:00:00Z',
+      liquidacaoEstornadaId: 'liq',
+      liquidacaoEstornadaCriadoEm: '2026-07-01T10:00:00Z',
+    })
 
     const resultado = agruparEstornosComOriginal([estorno, liquidacao])
 
     expect(resultado).toHaveLength(1)
-    expect(resultado[0].exibida.tipo).toBe('ESTORNO')
+    expect(resultado[0].exibida).toBe(estorno)
     expect(resultado[0].original).toBe(liquidacao)
-  })
-
-  it('a linha exibida usa a data do estorno com os dados da liquidação original', () => {
-    const liquidacao = linha({
-      id: 'liq',
-      estornada: true,
-      cedenteNome: 'Cedente Original',
-      valorFace: 222.22,
-      valorLiquido: 182.92,
-      criadoEm: '2026-07-01T10:00:00Z',
-    })
-    const estorno = linha({ id: 'est', tipo: 'ESTORNO', criadoEm: '2026-07-02T09:14:00Z' })
-
-    const [{ exibida }] = agruparEstornosComOriginal([estorno, liquidacao])
-
-    expect(exibida.criadoEm).toBe('2026-07-02T09:14:00Z')
-    expect(exibida.cedenteNome).toBe('Cedente Original')
-    expect(exibida.valorFace).toBe(222.22)
-    expect(exibida.valorLiquido).toBe(182.92)
   })
 
   it('liquidações comuns passam intactas, sem original', () => {
@@ -58,12 +47,26 @@ describe('agruparEstornosComOriginal', () => {
     expect(resultado).toEqual([{ exibida: comum }])
   })
 
-  it('estorno cuja liquidação caiu em outra página aparece sozinho, sem expandir', () => {
-    const estorno = linha({ id: 'est', tipo: 'ESTORNO' })
+  it('estorno cuja liquidação caiu em outra página reconstrói a original pela referência', () => {
+    const estorno = linha({
+      id: 'est',
+      tipo: 'ESTORNO',
+      valorFace: 222.22,
+      valorLiquido: 182.92,
+      criadoEm: '2026-07-02T09:14:00Z',
+      liquidacaoEstornadaId: 'liq-em-outra-pagina',
+      liquidacaoEstornadaCriadoEm: '2026-07-01T10:00:00Z',
+    })
 
-    const resultado = agruparEstornosComOriginal([estorno])
+    const [{ exibida, original }] = agruparEstornosComOriginal([estorno])
 
-    expect(resultado).toEqual([{ exibida: estorno }])
+    expect(exibida).toBe(estorno)
+    // valores/cedente do estorno espelham a liquidação; id e data vêm da referência
+    expect(original?.id).toBe('liq-em-outra-pagina')
+    expect(original?.tipo).toBe('LIQUIDACAO')
+    expect(original?.criadoEm).toBe('2026-07-01T10:00:00Z')
+    expect(original?.valorFace).toBe(222.22)
+    expect(original?.estornada).toBe(true)
   })
 
   it('liquidação estornada cujo estorno caiu em outra página continua aparecendo', () => {
@@ -74,11 +77,23 @@ describe('agruparEstornosComOriginal', () => {
     expect(resultado).toEqual([{ exibida: liquidacao }])
   })
 
-  it('recebível re-liquidado após estorno: cada estorno pareia com a liquidação certa', () => {
+  it('recebível re-liquidado após estorno: cada estorno pareia exatamente pela referência', () => {
     const liq1 = linha({ id: 'liq1', estornada: true, valorFace: 100, criadoEm: '2026-07-01T08:00:00Z' })
-    const est1 = linha({ id: 'est1', tipo: 'ESTORNO', criadoEm: '2026-07-01T09:00:00Z' })
+    const est1 = linha({
+      id: 'est1',
+      tipo: 'ESTORNO',
+      criadoEm: '2026-07-01T09:00:00Z',
+      liquidacaoEstornadaId: 'liq1',
+      liquidacaoEstornadaCriadoEm: '2026-07-01T08:00:00Z',
+    })
     const liq2 = linha({ id: 'liq2', estornada: true, valorFace: 200, criadoEm: '2026-07-01T10:00:00Z' })
-    const est2 = linha({ id: 'est2', tipo: 'ESTORNO', criadoEm: '2026-07-01T11:00:00Z' })
+    const est2 = linha({
+      id: 'est2',
+      tipo: 'ESTORNO',
+      criadoEm: '2026-07-01T11:00:00Z',
+      liquidacaoEstornadaId: 'liq2',
+      liquidacaoEstornadaCriadoEm: '2026-07-01T10:00:00Z',
+    })
 
     // ordem do extrato: mais recente primeiro
     const resultado = agruparEstornosComOriginal([est2, liq2, est1, liq1])
@@ -90,13 +105,11 @@ describe('agruparEstornosComOriginal', () => {
     expect(resultado[1].original?.id).toBe('liq1')
   })
 
-  it('não pareia estorno com liquidação de outro recebível', () => {
-    const liquidacaoOutroRecebivel = linha({ id: 'liq', estornada: true, recebivelId: 'r2' })
-    const estorno = linha({ id: 'est', tipo: 'ESTORNO', recebivelId: 'r1', criadoEm: '2026-07-02T09:00:00Z' })
+  it('estorno legado sem referência aparece sozinho, sem expandir', () => {
+    const estorno = linha({ id: 'est', tipo: 'ESTORNO' })
 
-    const resultado = agruparEstornosComOriginal([estorno, liquidacaoOutroRecebivel])
+    const resultado = agruparEstornosComOriginal([estorno])
 
-    expect(resultado).toHaveLength(2)
-    expect(resultado.find((t) => t.exibida.id === 'est')?.original).toBeUndefined()
+    expect(resultado).toEqual([{ exibida: estorno }])
   })
 })
