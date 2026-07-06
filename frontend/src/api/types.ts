@@ -88,6 +88,8 @@ export interface ExtratoLiquidacaoLinha {
   moedaTitulo: string
   moedaPagamento: string
   valorFace: number
+  /** Na moeda do título — base correta pra taxa de deságio mesmo em operação cross-currency. */
+  valorPresente: number
   valorLiquido: number
   criadoEm: string
   /**

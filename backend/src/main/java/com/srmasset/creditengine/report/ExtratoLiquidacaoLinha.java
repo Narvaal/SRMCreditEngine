@@ -13,6 +13,8 @@ public record ExtratoLiquidacaoLinha(
     String moedaTitulo,
     String moedaPagamento,
     BigDecimal valorFace,
+    /** Na moeda do título — base correta pra taxa de deságio mesmo em operação cross-currency. */
+    BigDecimal valorPresente,
     BigDecimal valorLiquido,
     Instant criadoEm,
     /**

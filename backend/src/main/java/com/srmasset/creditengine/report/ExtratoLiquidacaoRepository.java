@@ -71,7 +71,8 @@ public class ExtratoLiquidacaoRepository {
     String sql =
         """
         select l.id, l.recebivel_id, l.cedente_id, c.nome as cedente_nome, l.tipo,
-               l.moeda_titulo, l.moeda_pagamento, l.valor_face, l.valor_liquido, l.criado_em,
+               l.moeda_titulo, l.moeda_pagamento, l.valor_face, l.valor_presente, l.valor_liquido,
+               l.criado_em,
                l.liquidacao_estornada_id, orig.criado_em as liquidacao_estornada_criado_em
         from liquidacao l
         join cedente c on c.id = l.cedente_id
@@ -97,6 +98,7 @@ public class ExtratoLiquidacaoRepository {
                     rs.getString("moeda_titulo"),
                     rs.getString("moeda_pagamento"),
                     rs.getBigDecimal("valor_face"),
+                    rs.getBigDecimal("valor_presente"),
                     rs.getBigDecimal("valor_liquido"),
                     rs.getTimestamp("criado_em").toInstant(),
                     (UUID) rs.getObject("liquidacao_estornada_id"),

@@ -94,11 +94,9 @@ export function TransacoesTable({ transacoes, onEstornar, estornoEmAndamento = f
                 <Td className="tabular-nums text-right">{formatarMoeda(exibida.valorFace, exibida.moedaTitulo)}</Td>
                 <Td className="tabular-nums text-right">{formatarMoeda(exibida.valorLiquido, exibida.moedaPagamento)}</Td>
                 <Td className="tabular-nums text-right text-ink-muted">
-                  {/* Taxa só faz sentido comparando valores na mesma moeda — em conversão cross-currency,
-                      valorFace e valorLiquido estão em moedas diferentes e a razão entre eles não representa desconto. */}
-                  {exibida.moedaTitulo === exibida.moedaPagamento
-                    ? formatarPercentual(calcularDesagioPercentual(exibida.valorFace, exibida.valorLiquido))
-                    : '—'}
+                  {/* Deságio calculado sobre o valor presente (mesma moeda do título) — vale
+                      também em operação cross-currency, onde o valor líquido está em outra moeda. */}
+                  {formatarPercentual(calcularDesagioPercentual(exibida.valorFace, exibida.valorPresente))}
                 </Td>
                 <Td className="text-right">{renderAcao(exibida)}</Td>
               </tr>

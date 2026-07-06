@@ -13,6 +13,7 @@ const linha: ExtratoLiquidacaoLinha = {
   moedaTitulo: 'BRL',
   moedaPagamento: 'BRL',
   valorFace: 1000,
+  valorPresente: 900,
   valorLiquido: 900,
   criadoEm: '2026-07-03T12:00:00Z',
   liquidacaoEstornadaId: null,
@@ -40,10 +41,11 @@ describe('EstornoModal', () => {
     expect(screen.getByText(/liq-1/)).toBeInTheDocument()
   })
 
-  it('não mostra deságio em operação cross-currency', () => {
-    renderModal({ linha: { ...linha, moedaPagamento: 'USD' } })
+  it('mostra a taxa também em operação cross-currency (base: valor presente na moeda do título)', () => {
+    renderModal({ linha: { ...linha, moedaPagamento: 'USD', valorLiquido: 165.32 } })
 
-    expect(screen.queryByText('Deságio')).not.toBeInTheDocument()
+    expect(screen.getByText('Taxa')).toBeInTheDocument()
+    expect(screen.getByText('10.00%')).toBeInTheDocument()
   })
 
   it('confirmar chama onConfirmar; cancelar chama onFechar sem confirmar', async () => {

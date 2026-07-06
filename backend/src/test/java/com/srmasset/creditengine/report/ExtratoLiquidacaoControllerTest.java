@@ -34,6 +34,7 @@ class ExtratoLiquidacaoControllerTest {
         "BRL",
         "BRL",
         new BigDecimal("1000.00"),
+        new BigDecimal("975.609756"),
         new BigDecimal("975.61"),
         Instant.parse("2026-07-01T00:00:00Z"),
         null,

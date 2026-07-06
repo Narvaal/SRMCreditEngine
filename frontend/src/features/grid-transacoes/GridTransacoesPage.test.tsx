@@ -29,6 +29,7 @@ function paginaCom(...nomes: string[]): PaginaResponse<ExtratoLiquidacaoLinha> {
     moedaTitulo: 'BRL',
     moedaPagamento: 'BRL',
     valorFace: 1000,
+    valorPresente: 900,
     valorLiquido: 900,
     criadoEm: '2026-07-01T00:00:00Z',
     liquidacaoEstornadaId: null,

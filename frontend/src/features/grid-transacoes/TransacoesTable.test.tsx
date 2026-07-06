@@ -14,6 +14,7 @@ const linhaBase: ExtratoLiquidacaoLinha = {
   moedaTitulo: 'BRL',
   moedaPagamento: 'BRL',
   valorFace: 1000,
+  valorPresente: 900,
   valorLiquido: 900,
   criadoEm: '2026-07-03T12:00:00Z',
   liquidacaoEstornadaId: null,
@@ -38,24 +39,33 @@ describe('TransacoesTable', () => {
     expect(screen.getByText('Liquidação')).toBeInTheDocument()
   })
 
-  it('não calcula taxa quando moedaTitulo difere de moedaPagamento (comparação sem sentido entre moedas)', () => {
+  it('em cross-currency a taxa usa o valor presente (mesma moeda do título), não o líquido convertido', () => {
     render(
       <TransacoesTable
         transacoes={paraTabela([
-          { ...linhaBase, id: '3', moedaTitulo: 'BRL', moedaPagamento: 'USD', valorFace: 10000, valorLiquido: 1742.12 },
+          {
+            ...linhaBase,
+            id: '3',
+            moedaTitulo: 'BRL',
+            moedaPagamento: 'USD',
+            valorFace: 10000,
+            valorPresente: 9756.1,
+            valorLiquido: 1742.12,
+          },
         ])}
         onEstornar={vi.fn()}
       />,
     )
 
-    expect(screen.getAllByText('—').length).toBeGreaterThan(0)
+    expect(screen.getByText('2.44%')).toBeInTheDocument()
+    // a razão ingênua face/líquido em moedas diferentes (82.58%) nunca deve aparecer
     expect(screen.queryByText('82.58%')).not.toBeInTheDocument()
   })
 
   it('calcula a taxa normalmente quando a moeda é a mesma', () => {
     render(
       <TransacoesTable
-        transacoes={paraTabela([{ ...linhaBase, id: '4', valorFace: 1000, valorLiquido: 900 }])}
+        transacoes={paraTabela([{ ...linhaBase, id: '4', valorFace: 1000, valorPresente: 900, valorLiquido: 900 }])}
         onEstornar={vi.fn()}
       />,
     )

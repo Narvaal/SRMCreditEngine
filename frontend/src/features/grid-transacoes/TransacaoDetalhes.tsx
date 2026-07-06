@@ -37,15 +37,11 @@ export function TransacaoDetalhes({ linha }: { linha: ExtratoLiquidacaoLinha }) 
       <dt className="text-ink-muted">Valor líquido</dt>
       <dd className="tabular-nums">{formatarMoeda(linha.valorLiquido, linha.moedaPagamento)}</dd>
 
-      {/* Taxa só compara valores na mesma moeda — em cross-currency a razão não representa desconto. */}
-      {linha.moedaTitulo === linha.moedaPagamento && (
-        <>
-          <dt className="text-ink-muted">Taxa</dt>
-          <dd className="tabular-nums">
-            {formatarPercentual(calcularDesagioPercentual(linha.valorFace, linha.valorLiquido))}
-          </dd>
-        </>
-      )}
+      {/* Deságio sobre o valor presente (mesma moeda do título) — vale também em cross-currency. */}
+      <dt className="text-ink-muted">Taxa</dt>
+      <dd className="tabular-nums">
+        {formatarPercentual(calcularDesagioPercentual(linha.valorFace, linha.valorPresente))}
+      </dd>
     </dl>
   )
 }
