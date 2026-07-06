@@ -9,7 +9,6 @@ import {
   formatarPercentual,
   rotuloTipoTransacao,
 } from '../../lib/formatters'
-import { TransacaoDetalhes } from './TransacaoDetalhes'
 
 interface TransacoesTableProps {
   transacoes: TransacaoAgrupada[]
@@ -18,8 +17,6 @@ interface TransacoesTableProps {
   /** true enquanto um estorno está em voo — trava todos os botões pra não haver 2 transações. */
   estornoEmAndamento?: boolean
 }
-
-const TOTAL_COLUNAS = 9
 
 export function TransacoesTable({ transacoes, onEstornar, estornoEmAndamento = false }: TransacoesTableProps) {
   // Uma linha expandida por vez — estado puramente de apresentação, por isso vive aqui.
@@ -102,12 +99,27 @@ export function TransacoesTable({ transacoes, onEstornar, estornoEmAndamento = f
               </tr>
               {expandida && original && (
                 <tr className="bg-surface-muted/40">
-                  <td colSpan={TOTAL_COLUNAS} className="px-4 py-3">
-                    <div className="ml-8 flex flex-col gap-2">
-                      <span className="text-xs tracking-wide text-ink-muted uppercase">Operação original</span>
-                      <TransacaoDetalhes linha={original} />
-                    </div>
-                  </td>
+                  <Td className="pr-0 text-ink-faint">
+                    <span aria-hidden>↳</span>
+                    <span className="sr-only">Operação original</span>
+                  </Td>
+                  <Td>{formatarDataHora(original.criadoEm)}</Td>
+                  <Td>{original.cedenteNome}</Td>
+                  <Td>
+                    <Badge tom="brand">{rotuloTipoTransacao(original.tipo)}</Badge>
+                  </Td>
+                  <Td>
+                    {original.moedaTitulo} → {original.moedaPagamento}
+                  </Td>
+                  <Td className="tabular-nums text-right">{formatarMoeda(original.valorFace, original.moedaTitulo)}</Td>
+                  <Td className="tabular-nums text-right">{formatarMoeda(original.valorLiquido, original.moedaPagamento)}</Td>
+                  <Td className="tabular-nums text-right text-ink-muted">
+                    {formatarPercentual(calcularDesagioPercentual(original.valorFace, original.valorPresente))}
+                  </Td>
+                  {/* A original já foi estornada — nenhuma ação disponível. */}
+                  <Td className="text-right">
+                    <span className="text-ink-faint">—</span>
+                  </Td>
                 </tr>
               )}
             </Fragment>
