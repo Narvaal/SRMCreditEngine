@@ -141,7 +141,7 @@ Os contratos da API estão todos no Swagger (`/swagger-ui/index.html`), com um s
 
 ## Git na prática
 
-Trunk-based sobre `dev` com **Conventional Commits** atômicos; cada entrega coesa vira **PR pra `main`** (merge commit) com **tag semântica e Release** ([v1.0.0 → v1.6.1](https://github.com/Narvaal/SRMCreditEngine/releases)). Hooks de pre-commit (lint), commit-msg (convenção) e pre-push (testes); histórico organizado com **rebase interativo** antes dos merges. A branch `prod` existe só pra demonstrar o exercício de gestão de crise do enunciado — um hotfix real levado de `main` pra `prod` via `git cherry-pick` (`v1.0.1`, detalhes no [`ROADMAP.md`](./ROADMAP.md), Passo 12).
+Trunk-based sobre `dev` com **Conventional Commits** atômicos; cada entrega coesa vira **PR pra `main`** (merge commit) com **tag semântica e Release** ([v1.0.0 → v1.6.2](https://github.com/Narvaal/SRMCreditEngine/releases)). Hooks de pre-commit (lint), commit-msg (convenção) e pre-push (testes); histórico organizado com **rebase interativo** antes dos merges. A branch `prod` existe só pra demonstrar o exercício de gestão de crise do enunciado — um hotfix real levado de `main` pra `prod` via `git cherry-pick` (`v1.0.1`, detalhes no [`ROADMAP.md`](./ROADMAP.md), Passo 12).
 
 ## IA como copiloto
 
@@ -149,7 +149,7 @@ O projeto foi construído com Claude Code como copiloto, seguindo a política do
 
 ## Documentação
 
-- [`ROADMAP.md`](./ROADMAP.md) — a história completa: decisões de domínio e cada passo técnico (1–17).
+- [`ROADMAP.md`](./ROADMAP.md) — a história completa: decisões de domínio e cada passo técnico (1–18).
 - [`docs/diagrama-er.md`](./docs/diagrama-er.md) — modelo de dados, precisão numérica e gaps conhecidos.
 - [`docs/diagrama-c4.md`](./docs/diagrama-c4.md) — arquitetura (Contexto e Container).
 - [`docs/criterios-aceite.md`](./docs/criterios-aceite.md) — usabilidade, segurança, desempenho e escalabilidade, item a item.
