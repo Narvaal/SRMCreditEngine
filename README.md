@@ -66,6 +66,7 @@ docker-compose.yml → orquestra Frontend + API + PostgreSQL + Prometheus + Graf
 - [x] Resiliência: retry + circuit breaker (Resilience4j) na integração com o provider externo de taxas (mockado), com degradação graciosa — ver seção "Resiliência" abaixo e `ROADMAP.md`
 - [x] Estorno pela UI (Grid, com confirmação), cadastro de cedente inline no Painel, e containers 100% não-root (backend + frontend) — ver `ROADMAP.md`, Passo 15
 - [x] Grid de estado final e hardening do Painel: modal de confirmação + toast no estorno, liquidação estornada sai do extrato (a linha do estorno a representa e expande a operação de origem), filtro por tipo, taxa correta em cross-currency, validação de CPF/CNPJ e máscaras de valor — ver `ROADMAP.md`, Passo 16
+- [x] Dashboard do Grafana provisionado como código + métricas de negócio (`srm_liquidacoes*`/`srm_estornos*` por moeda) e histogramas de latência, com validação no smoke test do CI — ver `ROADMAP.md`, Passo 17
 
 ## Como rodar (stack completa: API + banco + observabilidade)
 
@@ -85,7 +86,7 @@ Sobe 5 containers: `postgres` (aplica as 11 migrations Flyway automaticamente no
 | Health check | http://localhost:8080/actuator/health | |
 | Métricas (Prometheus scrape) | http://localhost:8080/actuator/prometheus | |
 | Prometheus | http://localhost:9090 | target `srm-credit-engine` já configurado |
-| Grafana | http://localhost:3000 | login `admin` / `admin`; datasource do Prometheus já provisionado |
+| Grafana | http://localhost:3000 | login `admin` / `admin`; datasource e dashboard **SRM Credit Engine** já provisionados (negócio, API, circuit breaker, runtime) |
 
 Para derrubar tudo (incluindo os volumes de dados): `docker compose down -v`.
 
@@ -140,6 +141,12 @@ curl -X PUT "http://localhost:8080/mock/fx-provider/config?failureRate=0.0"   # 
 ```
 
 No `docker-compose`, um sync agendado (`FX_PROVIDER_SYNC_ENABLED=true`, a cada 60s) mantém o circuito ciclando e visível no Prometheus/Grafana sem intervenção manual.
+
+## Dashboard do Grafana
+
+O dashboard **SRM Credit Engine** (provisionado como código em `infra/grafana/provisioning/dashboards/`, carregado automaticamente no boot) organiza a observabilidade em 4 linhas: **Negócio** (liquidações/estornos e valor liquidado por moeda — métricas `srm_*` instrumentadas em `MetricasNegocio`), **API HTTP** (requisições/s por rota, latência p95 via histograma, erros 4xx/5xx), **Resiliência** (estado do circuit breaker `fxProvider` atual e ao longo do tempo, failure rate, retries, chamadas ao provider) e **Runtime** (heap, GC, CPU, pool de conexões). O ciclo do circuito descrito acima é visível ao vivo no painel de estado. Edições pela UI não persistem (`allowUiUpdates: false`) — o fluxo é exportar o JSON e commitar.
+
+Pra ver os painéis reagindo sob demanda, [`scripts/dashboard/`](./scripts/dashboard/README.md) tem 4 cenários prontos: `cenario1.sh` (ciclo completo do circuit breaker), `cenario2.sh` (rajada de erros 4xx), `cenario3.sh` (carga de requisições) e `cenario4.sh` (tráfego de negócio — liquidações + estornos).
 
 ## Como rodar (frontend isolado, modo dev — hot reload)
 
