@@ -29,6 +29,12 @@ jobs:
       - name: Build and test
         run: ./gradlew build
 
+      - name: Upload coverage report (JaCoCo)
+        uses: actions/upload-artifact@v6
+        with:
+          name: jacoco-coverage-report
+          path: backend/build/reports/jacoco/test/html
+
   frontend:
     runs-on: ubuntu-latest
     defaults:

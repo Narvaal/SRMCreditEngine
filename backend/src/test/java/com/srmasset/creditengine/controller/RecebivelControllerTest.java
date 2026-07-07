@@ -78,6 +78,22 @@ class RecebivelControllerTest {
   }
 
   @Test
+  void processarLote_acimaDoTetoDe100Itens_retorna400() throws Exception {
+    List<RecebivelRequest> itens = java.util.Collections.nCopies(101, itemValido());
+
+    mockMvc
+        .perform(
+            post("/api/recebiveis/lote")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new LoteRecebivelRequest(itens))))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.codigo").value("REQUEST_INVALIDO"))
+        .andExpect(jsonPath("$.camposInvalidos[0].campo").value("itens"))
+        .andExpect(
+            jsonPath("$.camposInvalidos[0].mensagem").value("Envie no máximo 100 itens por lote."));
+  }
+
+  @Test
   void processarLote_itemComValorFaceNegativo_retorna400() throws Exception {
     RecebivelRequest itemInvalido =
         new RecebivelRequest(

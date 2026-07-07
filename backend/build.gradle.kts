@@ -1,12 +1,14 @@
 plugins {
     java
+    jacoco
     id("org.springframework.boot") version "3.5.3"
     id("io.spring.dependency-management") version "1.1.7"
     id("com.diffplug.spotless") version "7.0.4"
 }
 
 group = "com.srmasset"
-version = "0.1.0-SNAPSHOT"
+// Acompanha a tag semântica da release corrente (SemVer via tags de Git).
+version = "1.6.0"
 description = "SRM Credit Engine — motor de precificação e liquidação de recebíveis multimoedas"
 
 java {
@@ -66,6 +68,20 @@ tasks.withType<Test> {
     testLogging {
         exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
         events("failed")
+    }
+}
+
+// Cobertura medida, não estimada: relatório gerado junto com `test` e publicado
+// como artifact no CI. Sem gate de % — o número serve pra conversa, não pra quebrar build.
+tasks.test {
+    finalizedBy(tasks.jacocoTestReport)
+}
+
+tasks.jacocoTestReport {
+    dependsOn(tasks.test)
+    reports {
+        xml.required = true
+        html.required = true
     }
 }
 

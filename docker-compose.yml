@@ -2,6 +2,10 @@ services:
   postgres:
     image: postgres:17
     container_name: srm-postgres
+    # Default do Docker é 64MB de /dev/shm — insuficiente pros hash joins de
+    # query paralela do Postgres sob concorrência (achado do teste de carga:
+    # "could not resize shared memory segment" virando 500 no extrato).
+    shm_size: 256mb
     environment:
       POSTGRES_USER: ${DB_USER:-srm}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-srm}
