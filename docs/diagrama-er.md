@@ -58,7 +58,7 @@ erDiagram
     }
 
     CAIXA {
-        varchar_3 moeda_codigo PK_FK
+        varchar_3 moeda_codigo PK, FK
         numeric saldo
         bigint version
     }
