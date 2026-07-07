@@ -129,7 +129,7 @@ npm run dev   # http://localhost:5173
 
 </details>
 
-Os contratos da API estão todos no Swagger (`/swagger-ui/index.html`); o DDL do banco está versionado em `backend/src/main/resources/db/migration/`.
+Os contratos da API estão todos no Swagger (`/swagger-ui/index.html`), com um snapshot OpenAPI versionado em [`docs/openapi.json`](./docs/openapi.json) — importável direto em clientes REST como Bruno, Postman ou Insomnia; o DDL do banco está versionado em `backend/src/main/resources/db/migration/`.
 
 ## Observabilidade e resiliência
 
@@ -153,5 +153,6 @@ O projeto foi construído com Claude Code como copiloto, seguindo a política do
 - [`docs/diagrama-er.md`](./docs/diagrama-er.md) — modelo de dados, precisão numérica e gaps conhecidos.
 - [`docs/diagrama-c4.md`](./docs/diagrama-c4.md) — arquitetura (Contexto e Container).
 - [`docs/criterios-aceite.md`](./docs/criterios-aceite.md) — usabilidade, segurança, desempenho e escalabilidade, item a item.
+- [`docs/openapi.json`](./docs/openapi.json) — contrato OpenAPI da API (exportado de `/v3/api-docs`), pronto pra importar no Bruno/Postman/Insomnia.
 - [`AI_USAGE.md`](./AI_USAGE.md) — uso de IA no desenvolvimento.
 - [`CLAUDE.md`](./CLAUDE.md) — o enunciado completo do desafio.
