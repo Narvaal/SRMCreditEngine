@@ -2,6 +2,8 @@ package com.srmasset.creditengine.report;
 
 import com.srmasset.creditengine.dto.PaginaResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import java.time.Instant;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -27,8 +29,8 @@ public class ExtratoLiquidacaoController {
       @RequestParam(required = false) String tipo,
       @RequestParam(required = false) Instant dataInicio,
       @RequestParam(required = false) Instant dataFim,
-      @RequestParam(defaultValue = "0") int page,
-      @RequestParam(defaultValue = "20") int size) {
+      @RequestParam(defaultValue = "0") @Min(0) int page,
+      @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
     var filtro =
         new ExtratoLiquidacaoFiltro(cedenteId, moeda, tipo, dataInicio, dataFim, page, size);
     return ResponseEntity.ok(extratoLiquidacaoRepository.buscar(filtro));
