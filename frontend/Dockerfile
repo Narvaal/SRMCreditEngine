@@ -9,7 +9,7 @@ RUN npm run build
 
 # Variante oficial não-root do Nginx (roda como usuário nginx, uid 101, e escuta 8080 —
 # porta <1024 exigiria root). Fecha a parte frontend do gap S9 de docs/criterios-aceite.md.
-FROM nginxinc/nginx-unprivileged:1.30-alpine
+FROM nginxinc/nginx-unprivileged:1.31-alpine
 COPY --from=build /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
