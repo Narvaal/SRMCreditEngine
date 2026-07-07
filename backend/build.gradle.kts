@@ -21,7 +21,7 @@ repositories {
     mavenCentral()
 }
 
-val springdocOpenapiVersion = "2.8.6"
+val springdocOpenapiVersion = "3.0.3"
 
 dependencies {
     // --- API / Web ---
