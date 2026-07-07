@@ -732,7 +732,8 @@
             "items": {
               "$ref": "#/components/schemas/RecebivelRequest"
             },
-            "minItems": 1
+            "maxItems": 100,
+            "minItems": 0
           }
         }
       },
