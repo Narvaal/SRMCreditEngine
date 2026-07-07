@@ -1,0 +1,1028 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "SRM Credit Engine API",
+    "description": "Precificação e liquidação de recebíveis multimoedas (BRL/USD): câmbio e taxas de mercado, simulação, liquidação em lote com estorno e extrato analítico. Endpoints em /mock/fx-provider simulam o provider externo de cotações (knob de falha pra demonstrar retry/circuit breaker).",
+    "version": "v1"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080",
+      "description": "Generated server url"
+    }
+  ],
+  "paths": {
+    "/mock/fx-provider/config": {
+      "put": {
+        "tags": [
+          "Mock FX Provider (simulação — não é API de negócio)"
+        ],
+        "operationId": "configurar",
+        "parameters": [
+          {
+            "name": "failureRate",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "format": "double"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/MockFxProviderStats"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/taxas/sincronizar": {
+      "post": {
+        "tags": [
+          "Sincronização de Taxas"
+        ],
+        "operationId": "sincronizar",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SincronizacaoTaxasResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/taxas-mercado": {
+      "get": {
+        "tags": [
+          "Taxa de Mercado"
+        ],
+        "operationId": "buscarVigente",
+        "parameters": [
+          {
+            "name": "moedaCodigo",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaxaMercadoResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Taxa de Mercado"
+        ],
+        "operationId": "registrar",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaxaMercadoRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaxaMercadoResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/taxas-cambio": {
+      "get": {
+        "tags": [
+          "Câmbio"
+        ],
+        "operationId": "buscarVigente_1",
+        "parameters": [
+          {
+            "name": "moedaOrigem",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "moedaDestino",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaxaCambioResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Câmbio"
+        ],
+        "operationId": "registrar_1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaxaCambioRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaxaCambioResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/recebiveis/simular": {
+      "post": {
+        "tags": [
+          "Recebíveis"
+        ],
+        "operationId": "simular",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SimulacaoRecebivelRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SimulacaoRecebivelResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/recebiveis/lote": {
+      "post": {
+        "tags": [
+          "Recebíveis"
+        ],
+        "operationId": "processarLote",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoteRecebivelRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoteLiquidacaoResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/liquidacoes/{id}/estorno": {
+      "post": {
+        "tags": [
+          "Liquidações"
+        ],
+        "operationId": "estornar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/LiquidacaoResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cedentes": {
+      "get": {
+        "tags": [
+          "Cedentes"
+        ],
+        "operationId": "listar",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CedenteResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Cedentes"
+        ],
+        "operationId": "criar",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CedenteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/CedenteResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/mock/fx-provider/stats": {
+      "get": {
+        "tags": [
+          "Mock FX Provider (simulação — não é API de negócio)"
+        ],
+        "operationId": "stats",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/MockFxProviderStats"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/mock/fx-provider/cotacoes": {
+      "get": {
+        "tags": [
+          "Mock FX Provider (simulação — não é API de negócio)"
+        ],
+        "operationId": "cotacoes",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/CotacoesProviderResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tipos-recebivel": {
+      "get": {
+        "tags": [
+          "Recebíveis"
+        ],
+        "operationId": "listar_1",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TipoRecebivelResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/relatorios/extrato-liquidacao": {
+      "get": {
+        "tags": [
+          "Relatórios"
+        ],
+        "operationId": "buscar",
+        "parameters": [
+          {
+            "name": "cedenteId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "moeda",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tipo",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "dataInicio",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "dataFim",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 0,
+              "minimum": 0
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaResponseExtratoLiquidacaoLinha"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/moedas": {
+      "get": {
+        "tags": [
+          "Câmbio"
+        ],
+        "operationId": "listar_2",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MoedaResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cedentes/{id}": {
+      "get": {
+        "tags": [
+          "Cedentes"
+        ],
+        "operationId": "buscarPorId",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/CedenteResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "MockFxProviderStats": {
+        "type": "object",
+        "properties": {
+          "totalChamadas": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "failureRate": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "SincronizacaoTaxasResponse": {
+        "type": "object",
+        "properties": {
+          "usdBrl": {
+            "type": "number"
+          },
+          "brlUsd": {
+            "type": "number"
+          },
+          "cdi": {
+            "type": "number"
+          },
+          "sofr": {
+            "type": "number"
+          },
+          "vigenteEm": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "TaxaMercadoRequest": {
+        "type": "object",
+        "properties": {
+          "moedaCodigo": {
+            "type": "string",
+            "minLength": 1
+          },
+          "indicador": {
+            "type": "string",
+            "minLength": 1
+          },
+          "valor": {
+            "type": "number"
+          },
+          "vigenteEm": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "valor",
+          "vigenteEm"
+        ]
+      },
+      "TaxaMercadoResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "moedaCodigo": {
+            "type": "string"
+          },
+          "indicador": {
+            "type": "string"
+          },
+          "valor": {
+            "type": "number"
+          },
+          "vigenteEm": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "TaxaCambioRequest": {
+        "type": "object",
+        "properties": {
+          "moedaOrigem": {
+            "type": "string",
+            "minLength": 1
+          },
+          "moedaDestino": {
+            "type": "string",
+            "minLength": 1
+          },
+          "valor": {
+            "type": "number"
+          },
+          "vigenteEm": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "valor",
+          "vigenteEm"
+        ]
+      },
+      "TaxaCambioResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "moedaOrigem": {
+            "type": "string"
+          },
+          "moedaDestino": {
+            "type": "string"
+          },
+          "valor": {
+            "type": "number"
+          },
+          "vigenteEm": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "SimulacaoRecebivelRequest": {
+        "type": "object",
+        "properties": {
+          "tipoRecebivelCodigo": {
+            "type": "string",
+            "minLength": 1
+          },
+          "valorFace": {
+            "type": "number",
+            "maximum": 1000000000000000.0
+          },
+          "moedaTitulo": {
+            "type": "string",
+            "minLength": 1
+          },
+          "dataVencimento": {
+            "type": "string",
+            "format": "date"
+          },
+          "moedaPagamento": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "dataVencimento",
+          "valorFace"
+        ]
+      },
+      "SimulacaoRecebivelResponse": {
+        "type": "object",
+        "properties": {
+          "valorFace": {
+            "type": "number"
+          },
+          "moedaTitulo": {
+            "type": "string"
+          },
+          "taxaBaseUsada": {
+            "type": "number"
+          },
+          "spreadUsado": {
+            "type": "number"
+          },
+          "prazoMesesUsado": {
+            "type": "number"
+          },
+          "valorPresente": {
+            "type": "number"
+          },
+          "moedaPagamento": {
+            "type": "string"
+          },
+          "taxaCambioUsada": {
+            "type": "number"
+          },
+          "valorLiquido": {
+            "type": "number"
+          }
+        }
+      },
+      "LoteRecebivelRequest": {
+        "type": "object",
+        "properties": {
+          "itens": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecebivelRequest"
+            },
+            "minItems": 1
+          }
+        }
+      },
+      "RecebivelRequest": {
+        "type": "object",
+        "properties": {
+          "cedenteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipoRecebivelCodigo": {
+            "type": "string",
+            "minLength": 1
+          },
+          "valorFace": {
+            "type": "number",
+            "maximum": 1000000000000000.0
+          },
+          "moedaTitulo": {
+            "type": "string",
+            "minLength": 1
+          },
+          "dataVencimento": {
+            "type": "string",
+            "format": "date"
+          },
+          "moedaPagamento": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "cedenteId",
+          "dataVencimento",
+          "valorFace"
+        ]
+      },
+      "LiquidacaoItemResultado": {
+        "type": "object",
+        "properties": {
+          "sucesso": {
+            "type": "boolean"
+          },
+          "recebivelId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "liquidacao": {
+            "$ref": "#/components/schemas/LiquidacaoResponse"
+          },
+          "codigoErro": {
+            "type": "string"
+          },
+          "mensagemErro": {
+            "type": "string"
+          }
+        }
+      },
+      "LiquidacaoResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "recebivelId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cedenteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string"
+          },
+          "liquidacaoEstornadaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "valorFace": {
+            "type": "number"
+          },
+          "moedaTitulo": {
+            "type": "string"
+          },
+          "taxaBaseUsada": {
+            "type": "number"
+          },
+          "spreadUsado": {
+            "type": "number"
+          },
+          "prazoMesesUsado": {
+            "type": "number"
+          },
+          "valorPresente": {
+            "type": "number"
+          },
+          "moedaPagamento": {
+            "type": "string"
+          },
+          "taxaCambioUsada": {
+            "type": "number"
+          },
+          "valorLiquido": {
+            "type": "number"
+          },
+          "criadoEm": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "LoteLiquidacaoResponse": {
+        "type": "object",
+        "properties": {
+          "totalItens": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalSucesso": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalFalha": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "itens": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LiquidacaoItemResultado"
+            }
+          }
+        }
+      },
+      "CedenteRequest": {
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": "string",
+            "maxLength": 20,
+            "minLength": 3,
+            "pattern": "[\\p{L}\\p{N} ]+"
+          },
+          "documento": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "CedenteResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "documento": {
+            "type": "string"
+          }
+        }
+      },
+      "CotacoesProviderResponse": {
+        "type": "object",
+        "properties": {
+          "usdBrl": {
+            "type": "number"
+          },
+          "brlUsd": {
+            "type": "number"
+          },
+          "cdi": {
+            "type": "number"
+          },
+          "sofr": {
+            "type": "number"
+          },
+          "vigenteEm": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "TipoRecebivelResponse": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string"
+          },
+          "nome": {
+            "type": "string"
+          }
+        }
+      },
+      "ExtratoLiquidacaoLinha": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "recebivelId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cedenteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cedenteNome": {
+            "type": "string"
+          },
+          "tipo": {
+            "type": "string"
+          },
+          "moedaTitulo": {
+            "type": "string"
+          },
+          "moedaPagamento": {
+            "type": "string"
+          },
+          "valorFace": {
+            "type": "number"
+          },
+          "valorPresente": {
+            "type": "number"
+          },
+          "valorLiquido": {
+            "type": "number"
+          },
+          "criadoEm": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "liquidacaoEstornadaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "liquidacaoEstornadaCriadoEm": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "PaginaResponseExtratoLiquidacaoLinha": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExtratoLiquidacaoLinha"
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalElements": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "totalPages": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "MoedaResponse": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "casasDecimais": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      }
+    }
+  }
+}

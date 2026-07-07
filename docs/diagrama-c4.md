@@ -4,7 +4,7 @@ Diagramas de arquitetura nos níveis 1 (Contexto) e 2 (Container), exigidos expl
 
 **Nota de implementação**: usamos `flowchart` do Mermaid estilizado como C4 (cores/rótulos `<<person>>`/`<<system>>`/`<<container>>`), em vez do tipo nativo `C4Context`/`C4Container` do Mermaid — o motor de layout do C4 nativo usa caixas de tamanho fixo que não se ajustam ao texto, gerando rótulos sobrepostos. O `flowchart` usa o motor de layout padrão do Mermaid (mais maduro), com caixas que crescem conforme o conteúdo.
 
-Reflete o estado real do sistema em 2026-07-04 (ver `ROADMAP.md`), não um estado aspiracional — inclusive as peças que hoje são mockadas/manuais estão marcadas como tal.
+Reflete o estado real do sistema em 2026-07-06 (ver `ROADMAP.md`), não um estado aspiracional — inclusive as peças que hoje são mockadas/manuais estão marcadas como tal.
 
 ## Nível 1 — Contexto
 
