@@ -63,6 +63,14 @@ jobs:
       - name: Wait for frontend
         run: timeout 30 bash -c 'until curl -sf http://localhost:8081 >/dev/null; do sleep 2; done'
 
+      - name: Wait for Prometheus target up
+        run: timeout 90 bash -c 'until curl -sf http://localhost:9090/api/v1/targets | grep -q "\"health\":\"up\""; do sleep 3; done'
+
+      - name: Check Grafana health and provisioned dashboard
+        run: |
+          timeout 60 bash -c 'until curl -sf http://localhost:3000/api/health >/dev/null; do sleep 2; done'
+          curl -sf -u admin:admin http://localhost:3000/api/dashboards/uid/srm-credit-engine | grep -q '"title":"SRM Credit Engine"'
+
       - name: Show logs on failure
         if: failure()
         run: docker compose logs
