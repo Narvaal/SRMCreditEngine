@@ -42,7 +42,7 @@ Para derrubar tudo: `docker compose down -v`.
 | 🟡 **Pleno** | Docker Compose com stack completa; [Strategy Pattern](./backend/src/main/java/com/srmasset/creditengine/pricing) na precificação por tipo de recebível; exception handler global (erros sempre no mesmo envelope JSON); validação de entrada nas duas pontas (Bean Validation + Zod); testes unitários das regras de precificação |
 | 🔴 **Sênior** | [Diagrama C4](./docs/diagrama-c4.md); logs estruturados (JSON/ECS) com correlation id por requisição; métricas + [dashboard do Grafana provisionado como código](./infra/grafana/provisioning/dashboards/README.md); CI/CD (lint, testes e smoke test da stack completa); resiliência com retry + circuit breaker na integração externa; Optimistic Locking contra liquidações concorrentes; Git hooks, tags semânticas e rebase interativo |
 
-**Além do pedido**: grid com visão de estado final (estorno expande a operação de origem), métricas de negócio no dashboard, [cenários de demonstração](./scripts/dashboard/README.md), [critérios de aceite formais](./docs/criterios-aceite.md) com gaps honestos, e dois itens do nível Especialista — estratégia de branching justificada e [simulação de gestão de crise](./ROADMAP.md) com hotfix via `cherry-pick` (`v1.0.1`).
+**Além do pedido**: grid com visão de estado final (estorno expande a operação de origem), métricas de negócio no dashboard, [cenários de demonstração](./scripts/dashboard/README.md), [teste de carga real](./scripts/carga/README.md) (1M de linhas — a primeira execução achou e corrigiu 2 problemas reais de performance), [critérios de aceite formais](./docs/criterios-aceite.md) com gaps honestos, e dois itens do nível Especialista — estratégia de branching justificada e [simulação de gestão de crise](./ROADMAP.md) com hotfix via `cherry-pick` (`v1.0.1`).
 
 ## Mapa pra avaliação
 
@@ -51,7 +51,7 @@ Onde encontrar a evidência de cada critério do enunciado (seção 8 do [`CLAUD
 | Critério | Onde está |
 |---|---|
 | Fundamentação teórica da stack | Seção "Stack" logo abaixo |
-| Design de código (SOLID, DRY, KISS) | 3 camadas + relatório em 2 camadas ([C4](./docs/diagrama-c4.md)); Strategy em [`pricing/`](./backend/src/main/java/com/srmasset/creditengine/pricing); 132 testes de backend + 121 de frontend |
+| Design de código (SOLID, DRY, KISS) | 3 camadas + relatório em 2 camadas ([C4](./docs/diagrama-c4.md)); Strategy em [`pricing/`](./backend/src/main/java/com/srmasset/creditengine/pricing); 133 testes de backend (≈88% de linhas, JaCoCo no CI) + 121 de frontend |
 | Domínio do Git | Seção "Git na prática" + [histórico de releases](https://github.com/Narvaal/SRMCreditEngine/releases) e PRs |
 | Domínio do negócio | [Diagrama ER](./docs/diagrama-er.md) (precisão por coluna, ledger append-only); Optimistic Locking testado com concorrência real |
 | Uso da IA | [`AI_USAGE.md`](./AI_USAGE.md) — prompts, erros da IA e análise crítica, mantido a cada entrega |
@@ -88,7 +88,7 @@ Cada escolha amarrada ao problema — um motor financeiro multimoedas, onde prec
 /frontend   → Painel do Operador e Grid de Transações (TypeScript / React / Vite)
 /docs       → Diagrama ER, diagrama C4 e critérios de aceite
 /infra      → Prometheus e Grafana (datasource e dashboard provisionados)
-/scripts    → Cenários de demonstração do dashboard
+/scripts    → Cenários de demonstração do dashboard e teste de carga (k6)
 ```
 
 ## Rodando fora do Docker (desenvolvimento)
