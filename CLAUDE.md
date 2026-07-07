@@ -154,7 +154,7 @@ Independente da ferramenta de migração (Flyway, Liquibase etc.) ou ORM, fornec
 
 ## Notas para o Claude Code neste repositório
 
-- Nível-alvo: **Sênior**. Todos os requisitos explícitos (Júnior+Pleno+Sênior) estão fechados e auditados — ver `ROADMAP.md` (Passos 1–16) pro histórico e a lista do que resta (nice-to-have).
+- Nível-alvo: **Sênior**. Todos os requisitos explícitos (Júnior+Pleno+Sênior) estão fechados e auditados — ver `ROADMAP.md` (Passos 1–17) pro histórico — nenhum nice-to-have restante.
 - Stack definida: Java 21 + Spring Boot 3.5 (Gradle/Kotlin DSL) + PostgreSQL/Flyway no backend; React 19 + TypeScript + Vite no frontend. Fundamentação no `README.md`.
 - Precisão decimal é regra de domínio: nunca `float`/`double` pra dinheiro — `BigDecimal` em toda a cadeia (potência fracionária via `big-math`, isolada em `MotorPrecificacao`); escalas/arredondamento centralizados em `pricing/Precisao.java`.
 - Manter `AI_USAGE.md` atualizado conforme o trabalho avança (seção 2), não só ao final.

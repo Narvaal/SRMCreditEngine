@@ -64,6 +64,11 @@ management:
   metrics:
     tags:
       application: ${spring.application.name}
+    distribution:
+      percentiles-histogram:
+        # Buckets de histograma pro Prometheus calcular p95/p99 de latência HTTP
+        # (histogram_quantile no dashboard do Grafana).
+        http.server.requests: true
 
 springdoc:
   swagger-ui:

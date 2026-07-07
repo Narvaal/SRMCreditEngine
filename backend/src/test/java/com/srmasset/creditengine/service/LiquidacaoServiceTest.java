@@ -25,6 +25,7 @@ import com.srmasset.creditengine.exception.MoedaNaoEncontradaException;
 import com.srmasset.creditengine.exception.RecebivelJaLiquidadoException;
 import com.srmasset.creditengine.exception.RecebivelNaoEncontradoException;
 import com.srmasset.creditengine.exception.SaldoInsuficienteException;
+import com.srmasset.creditengine.metrics.MetricasNegocio;
 import com.srmasset.creditengine.pricing.DuplicataMercantilPricingStrategy;
 import com.srmasset.creditengine.pricing.MotorPrecificacao;
 import com.srmasset.creditengine.pricing.PrazoCalculator;
@@ -34,6 +35,8 @@ import com.srmasset.creditengine.repository.CaixaRepository;
 import com.srmasset.creditengine.repository.LiquidacaoRepository;
 import com.srmasset.creditengine.repository.MoedaRepository;
 import com.srmasset.creditengine.repository.RecebivelRepository;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
@@ -67,6 +70,7 @@ class LiquidacaoServiceTest {
   @Mock private TaxaMercadoService taxaMercadoService;
   @Mock private CambioService cambioService;
 
+  private MeterRegistry meterRegistry;
   private LiquidacaoService liquidacaoService;
 
   private Moeda brl;
@@ -86,6 +90,9 @@ class LiquidacaoServiceTest {
     Clock clockFixo = Clock.fixed(AGORA, ZoneOffset.UTC);
     PrazoCalculator prazoCalculator = new PrazoCalculator(clockFixo);
 
+    // Registry real (não mock): os asserts de métricas leem o contador de verdade.
+    meterRegistry = new SimpleMeterRegistry();
+
     liquidacaoService =
         new LiquidacaoService(
             recebivelRepository,
@@ -96,7 +103,8 @@ class LiquidacaoServiceTest {
             motorPrecificacao,
             prazoCalculator,
             taxaMercadoService,
-            cambioService);
+            cambioService,
+            new MetricasNegocio(meterRegistry));
 
     brl = Moeda.builder().codigo("BRL").nome("Real Brasileiro").build();
     usd = Moeda.builder().codigo("USD").nome("Dólar Americano").build();
@@ -150,6 +158,9 @@ class LiquidacaoServiceTest {
         .isEqualByComparingTo(new BigDecimal("100000.00").subtract(resultado.getValorLiquido()));
     assertThat(recebivel.getStatus()).isEqualTo(StatusRecebivel.LIQUIDADO);
     verify(caixaRepository).flush();
+    assertThat(meterRegistry.counter("srm.liquidacoes", "moeda", "BRL").count()).isEqualTo(1.0);
+    assertThat(meterRegistry.counter("srm.liquidacoes.valor", "moeda", "BRL").count())
+        .isEqualTo(resultado.getValorLiquido().doubleValue());
   }
 
   @Test
@@ -232,6 +243,8 @@ class LiquidacaoServiceTest {
     assertThat(recebivel.getStatus()).isEqualTo(StatusRecebivel.PENDENTE);
     verify(caixaRepository, never()).flush();
     verifyNoInteractions(liquidacaoRepository);
+    // Falha não conta como liquidação nas métricas de negócio.
+    assertThat(meterRegistry.counter("srm.liquidacoes", "moeda", "BRL").count()).isZero();
   }
 
   @Test
@@ -283,6 +296,9 @@ class LiquidacaoServiceTest {
         .isEqualByComparingTo(saldoAntes.add(original.getValorLiquido()));
     assertThat(recebivel.getStatus()).isEqualTo(StatusRecebivel.ESTORNADO);
     verify(caixaRepository).flush();
+    assertThat(meterRegistry.counter("srm.estornos", "moeda", "BRL").count()).isEqualTo(1.0);
+    assertThat(meterRegistry.counter("srm.estornos.valor", "moeda", "BRL").count())
+        .isEqualTo(original.getValorLiquido().doubleValue());
   }
 
   @Test

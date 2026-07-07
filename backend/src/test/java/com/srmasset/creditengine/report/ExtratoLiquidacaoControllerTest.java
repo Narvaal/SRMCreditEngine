@@ -91,4 +91,19 @@ class ExtratoLiquidacaoControllerTest {
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.codigo").value("REQUEST_INVALIDO"));
   }
+
+  @Test
+  void buscar_paginacaoForaDosLimites_retorna400NaoQuinhentos() throws Exception {
+    // Bug real achado pelos cenários de demonstração: page=-1 estourava
+    // IllegalArgumentException no PageRequest e caía no catch-all como 500.
+    mockMvc
+        .perform(get("/api/relatorios/extrato-liquidacao").param("page", "-1"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.codigo").value("REQUEST_INVALIDO"));
+
+    mockMvc
+        .perform(get("/api/relatorios/extrato-liquidacao").param("size", "101"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.codigo").value("REQUEST_INVALIDO"));
+  }
 }

@@ -14,6 +14,7 @@ import com.srmasset.creditengine.exception.MoedaNaoEncontradaException;
 import com.srmasset.creditengine.exception.RecebivelJaLiquidadoException;
 import com.srmasset.creditengine.exception.RecebivelNaoEncontradoException;
 import com.srmasset.creditengine.exception.SaldoInsuficienteException;
+import com.srmasset.creditengine.metrics.MetricasNegocio;
 import com.srmasset.creditengine.pricing.MotorPrecificacao;
 import com.srmasset.creditengine.pricing.PrazoCalculator;
 import com.srmasset.creditengine.pricing.Precisao;
@@ -51,6 +52,7 @@ public class LiquidacaoService {
   private final PrazoCalculator prazoCalculator;
   private final TaxaMercadoService taxaMercadoService;
   private final CambioService cambioService;
+  private final MetricasNegocio metricasNegocio;
 
   @Transactional
   public Liquidacao liquidar(UUID recebivelId, String moedaPagamentoCodigo) {
@@ -132,6 +134,7 @@ public class LiquidacaoService {
             .build();
 
     Liquidacao salva = liquidacaoRepository.save(liquidacao);
+    metricasNegocio.registrarLiquidacao(moedaPagamentoCodigo, valorLiquido);
     log.atInfo()
         .setMessage("Liquidação concluída")
         .addKeyValue("recebivelId", recebivelId)
@@ -196,6 +199,7 @@ public class LiquidacaoService {
             .build();
 
     Liquidacao salvo = liquidacaoRepository.save(estorno);
+    metricasNegocio.registrarEstorno(moedaPagamentoCodigo, original.getValorLiquido());
     log.atInfo()
         .setMessage("Estorno concluído")
         .addKeyValue("liquidacaoOriginalId", liquidacaoOriginalId)

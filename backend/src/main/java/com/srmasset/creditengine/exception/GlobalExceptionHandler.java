@@ -11,6 +11,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 /**
@@ -94,14 +95,16 @@ public class GlobalExceptionHandler {
   }
 
   /**
-   * Query param obrigatório ausente (ex.: {@code GET /api/taxas-cambio} sem {@code moedaOrigem}) ou
-   * com tipo incompatível (ex.: {@code UUID}/{@code Instant} malformado). Sem este handler
-   * dedicado, {@link #handleInesperado} (catch-all de {@code Exception}) intercepta essas exceções
-   * do próprio Spring MVC antes da resolução padrão do framework e devolve 500 em vez de 400.
+   * Query param obrigatório ausente (ex.: {@code GET /api/taxas-cambio} sem {@code moedaOrigem}),
+   * com tipo incompatível (ex.: {@code UUID}/{@code Instant} malformado) ou violando constraint de
+   * método (ex.: {@code page=-1} com {@code @Min(0)}). Sem este handler dedicado, {@link
+   * #handleInesperado} (catch-all de {@code Exception}) intercepta essas exceções do próprio Spring
+   * MVC antes da resolução padrão do framework e devolve 500 em vez de 400.
    */
   @ExceptionHandler({
     MissingServletRequestParameterException.class,
-    MethodArgumentTypeMismatchException.class
+    MethodArgumentTypeMismatchException.class,
+    HandlerMethodValidationException.class
   })
   public ResponseEntity<ErroResponse> handleParametroInvalido(
       Exception ex, HttpServletRequest req) {
