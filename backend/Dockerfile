@@ -1,4 +1,4 @@
-FROM eclipse-temurin:21-jdk AS build
+FROM eclipse-temurin:25-jdk AS build
 WORKDIR /app
 
 COPY gradlew settings.gradle.kts build.gradle.kts ./
@@ -8,7 +8,7 @@ RUN ./gradlew --version
 COPY src ./src
 RUN ./gradlew bootJar --no-daemon -x spotlessCheck
 
-FROM eclipse-temurin:21-jre
+FROM eclipse-temurin:25-jre
 WORKDIR /app
 
 # Roda como usuário não-root — hardening básico, sem custo funcional (porta 8080 não exige root).
