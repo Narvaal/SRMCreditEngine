@@ -3,26 +3,73 @@
 [![CI](https://github.com/Narvaal/SRMCreditEngine/actions/workflows/ci.yml/badge.svg)](https://github.com/Narvaal/SRMCreditEngine/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/Narvaal/SRMCreditEngine)](https://github.com/Narvaal/SRMCreditEngine/releases/latest)
 
-Plataforma de cessão de crédito multimoedas. Recebe lotes de recebíveis (duplicatas, cheques pré-datados, etc.), calcula o deságio de cada um com base no risco do ativo e na moeda de liquidação, e registra a liquidação de forma auditável.
+Uma empresa que tem dinheiro a receber (duplicatas, cheques pré-datados) pode vender esses títulos pra um fundo e receber à vista, com um desconto — o **deságio**. Este sistema faz esse negócio funcionar: calcula o deságio de cada título conforme o risco e o prazo, liquida o pagamento em **BRL ou USD**, e registra tudo de forma auditável — nada é editado ou apagado, correções viram estornos.
 
-Desenvolvido como desafio técnico, nível **Sênior** (foco em Observabilidade, Escalabilidade e Automação). O raciocínio de negócio, decisões de domínio e progresso técnico são documentados em [`ROADMAP.md`](./ROADMAP.md); o uso de IA no desenvolvimento é documentado em [`AI_USAGE.md`](./AI_USAGE.md); o enunciado completo do desafio está em [`CLAUDE.md`](./CLAUDE.md).
+Construído para o desafio técnico da SRM Asset, no nível **Sênior**. Todos os requisitos do enunciado (Júnior + Pleno + Sênior) foram entregues, além dos nice-to-haves — o detalhe de cada entrega está no [`ROADMAP.md`](./ROADMAP.md).
 
-> **Escopo**: os itens do nível Especialista (ADRs, design para 1 milhão de tx/minuto, IaC, proposta EDA) estão deliberadamente fora desta entrega — com duas exceções incorporadas por serem baratas e complementares ao fluxo Sênior: a estratégia de branching justificada (seção abaixo) e a simulação de gestão de crise com `git cherry-pick` (`ROADMAP.md`, Passo 12).
+## Demonstração em 5 minutos
+
+Pré-requisito: Docker + Docker Compose.
+
+```bash
+docker compose up -d --build
+```
+
+Sobe 5 containers (app, banco e observabilidade), com migrations e dashboards aplicados automaticamente:
+
+| Serviço | URL | Acesso |
+|---|---|---|
+| **Frontend** (o produto) | http://localhost:8081 | — |
+| API + Swagger | http://localhost:8080/swagger-ui/index.html | — |
+| Grafana (dashboard pronto) | http://localhost:3000 | `admin` / `admin` |
+| Prometheus | http://localhost:9090 | — |
+
+Roteiro sugerido:
+
+1. **Painel do Operador** (frontend): preencha um recebível e veja o valor líquido calculado **em tempo real**, antes de liquidar. Dá pra cadastrar um cedente novo sem sair da tela.
+2. Clique em **Registrar** e veja a liquidação acontecer.
+3. **Grid de Transações**: a operação aparece no histórico (filtros e paginação direto na URL). Clique em **Estornar** — confirmação em modal, resultado em toast, e a linha do estorno passa a mostrar a operação de origem ("Ver origem").
+4. Abra o **dashboard do Grafana**: negócio (liquidações, estornos, valor por moeda), API, circuit breaker e runtime — tudo já provisionado.
+5. Com o dashboard aberto, rode `./scripts/dashboard/cenario1.sh` e veja o **circuit breaker** abrir e se recuperar ao vivo. Há [5 cenários prontos](./scripts/dashboard/README.md) (erros, carga, tráfego de negócio, um pico por rota).
+
+Para derrubar tudo: `docker compose down -v`.
+
+## O que foi entregue, por nível do desafio
+
+| Nível | Entregas |
+|---|---|
+| 🟢 **Júnior** | API + frontend funcionais; cálculo de deságio com precisão decimal (`BigDecimal` de ponta a ponta); banco normalizado com [diagrama ER e DDL](./docs/diagrama-er.md); este README |
+| 🟡 **Pleno** | Docker Compose com stack completa; [Strategy Pattern](./backend/src/main/java/com/srmasset/creditengine/pricing) na precificação por tipo de recebível; exception handler global (erros sempre no mesmo envelope JSON); validação de entrada nas duas pontas (Bean Validation + Zod); testes unitários das regras de precificação |
+| 🔴 **Sênior** | [Diagrama C4](./docs/diagrama-c4.md); logs estruturados (JSON/ECS) com correlation id por requisição; métricas + [dashboard do Grafana provisionado como código](./infra/grafana/provisioning/dashboards/README.md); CI/CD (lint, testes e smoke test da stack completa); resiliência com retry + circuit breaker na integração externa; Optimistic Locking contra liquidações concorrentes; Git hooks, tags semânticas e rebase interativo |
+
+**Além do pedido**: grid com visão de estado final (estorno expande a operação de origem), métricas de negócio no dashboard, [cenários de demonstração](./scripts/dashboard/README.md), [critérios de aceite formais](./docs/criterios-aceite.md) com gaps honestos, e dois itens do nível Especialista — estratégia de branching justificada e [simulação de gestão de crise](./ROADMAP.md) com hotfix via `cherry-pick` (`v1.0.1`).
+
+## Mapa pra avaliação
+
+Onde encontrar a evidência de cada critério do enunciado (seção 8 do [`CLAUDE.md`](./CLAUDE.md)):
+
+| Critério | Onde está |
+|---|---|
+| Fundamentação teórica da stack | Seção "Stack" logo abaixo |
+| Design de código (SOLID, DRY, KISS) | 3 camadas + relatório em 2 camadas ([C4](./docs/diagrama-c4.md)); Strategy em [`pricing/`](./backend/src/main/java/com/srmasset/creditengine/pricing); 132 testes de backend + 121 de frontend |
+| Domínio do Git | Seção "Git na prática" + [histórico de releases](https://github.com/Narvaal/SRMCreditEngine/releases) e PRs |
+| Domínio do negócio | [Diagrama ER](./docs/diagrama-er.md) (precisão por coluna, ledger append-only); Optimistic Locking testado com concorrência real |
+| Uso da IA | [`AI_USAGE.md`](./AI_USAGE.md) — prompts, erros da IA e análise crítica, mantido a cada entrega |
+| System Design (Sênior+) | [Critérios de aceite](./docs/criterios-aceite.md) com status e evidência por item; observabilidade abaixo |
 
 ## Stack
 
-| Camada | Tecnologia |
-|---|---|
-| Backend | Java 21 + Spring Boot 3.5, build com Gradle (Kotlin DSL) |
-| Banco de dados | PostgreSQL, migrations com Flyway |
-| Documentação de API | OpenAPI/Swagger (springdoc) |
-| Observabilidade | Spring Boot Actuator + Micrometer → Prometheus → Grafana; logs estruturados (JSON, formato ECS) com correlation id por requisição |
-| Resiliência | Resilience4j (retry + circuit breaker) na integração externa de taxas |
-| Testes (backend) | JUnit 5, Testcontainers (Postgres) |
-| Frontend | TypeScript + React + Vite, Tailwind CSS v4, TanStack Query, React Router, React Hook Form + Zod |
-| Testes (frontend) | Vitest + Testing Library |
+| Camada | Escolha | Por quê (resumo) |
+|---|---|---|
+| Backend | Java 21 + Spring Boot 3.5 | Tipagem forte e o ecossistema mais maduro pra domínio financeiro (ACID, `BigDecimal`, locking) |
+| Banco | PostgreSQL + Flyway | `NUMERIC` com precisão exata, constraints ricas; schema versionado como código |
+| Frontend | React 19 + TypeScript + Vite | Tipos espelhando os DTOs da API pegam quebra de contrato em compile-time |
+| Estado no front | TanStack Query + RHF + Zod (sem Redux) | Três fontes de verdade bem delimitadas dispensam store global |
+| Observabilidade | Actuator → Prometheus → Grafana | Métricas sem código extra; dashboard versionado no repo |
+| Resiliência | Resilience4j | Retry + circuit breaker na única chamada externa (provider de câmbio) |
 
-### Fundamentação teórica (por que esta stack)
+<details>
+<summary><b>Fundamentação completa (por que cada escolha, amarrada ao problema)</b></summary>
 
 Cada escolha amarrada ao problema — um motor financeiro multimoedas, onde precisão decimal, atomicidade e concorrência são domínio, não detalhe:
 
@@ -34,65 +81,20 @@ Cada escolha amarrada ao problema — um motor financeiro multimoedas, onde prec
 - **TanStack Query + React Hook Form + Zod, sem Redux**: a resposta ao "gerenciamento de estado global, se necessário" do enunciado foi *não é necessário* — três fontes de verdade bem delimitadas (dados de servidor no React Query, formulário no RHF, filtros/paginação na URL) eliminam o store global. Zod valida na borda do frontend com o mesmo espírito do Bean Validation no backend.
 - **Monorepo**: 1 repositório público (como pede a entrega), 1 pipeline de CI orquestrando os dois lados, e histórico correlacionando mudanças de API com mudanças de UI.
 
-## Estrutura do repositório
-
-Monorepo:
+</details>
 
 ```
 /backend    → API, regras de negócio e persistência (Java / Spring / Gradle)
 /frontend   → Painel do Operador e Grid de Transações (TypeScript / React / Vite)
-/docs       → Diagrama ER, diagrama C4 (Nível 1 e 2) e critérios de aceite (DDL versionado em backend/src/main/resources/db/migration)
-/infra      → Configuração de Prometheus e Grafana (provisionamento, scrape config)
-/.github/workflows → pipeline de CI (GitHub Actions)
-docker-compose.yml → orquestra Frontend + API + PostgreSQL + Prometheus + Grafana
+/docs       → Diagrama ER, diagrama C4 e critérios de aceite
+/infra      → Prometheus e Grafana (datasource e dashboard provisionados)
+/scripts    → Cenários de demonstração do dashboard
 ```
 
-## Status atual
+## Rodando fora do Docker (desenvolvimento)
 
-- [x] Entendimento do problema e decisões de domínio (ver `ROADMAP.md`)
-- [x] Projeto Gradle do backend criado (Spring Boot, PostgreSQL, Flyway, Actuator/Prometheus, OpenAPI, JUnit/Testcontainers)
-- [x] Projeto do frontend criado (React + TypeScript + Vite)
-- [x] Git hooks (Husky): pre-commit (lint/format), commit-msg (Conventional Commits), pre-push (testes)
-- [x] Modelo de dados (Diagrama ER + DDL) e migrations Flyway — ver [`docs/diagrama-er.md`](./docs/diagrama-er.md)
-- [x] `docker-compose` (API + PostgreSQL + Prometheus + Grafana) — validado de ponta a ponta
-- [x] Camadas de aplicação / negócio / persistência e motor de precificação (Strategy Pattern) — API funcional de ponta a ponta, ver `ROADMAP.md`
-- [x] Painel do Operador (simulação em tempo real) e Grid de Transações (paginação/filtros server-side) — ver `ROADMAP.md`
-- [x] CI/CD (GitHub Actions: lint + testes de backend e frontend + smoke test do `docker-compose` completo) e frontend containerizado (Nginx) no `docker-compose`
-- [x] Logs estruturados (JSON/ECS) com correlation id (`requestId`) por requisição, correlacionando todas as linhas de log de uma mesma chamada — ver `ROADMAP.md`
-- [x] Cobertura de testes completa: services de negócio, controllers (`@WebMvcTest`), relatório (Testcontainers), exception handler no backend; hooks orquestradores e componentes de composição no frontend — ver `ROADMAP.md`
-- [x] Diagrama C4 (Nível 1 e 2) e critérios de aceite documentados (usabilidade, segurança, desempenho, escalabilidade) — ver [`docs/diagrama-c4.md`](./docs/diagrama-c4.md) e [`docs/criterios-aceite.md`](./docs/criterios-aceite.md)
-- [x] Primeiro release: PR `dev → main` + tag semântica [`v1.0.0`](https://github.com/Narvaal/SRMCreditEngine/releases/tag/v1.0.0)
-- [x] Simulação de gestão de crise: hotfix (`backend/Dockerfile` não-root) `git cherry-pick` de `main` pra `prod`, tag [`v1.0.1`](https://github.com/Narvaal/SRMCreditEngine/releases/tag/v1.0.1) — ver "Estratégia de branching" abaixo e `ROADMAP.md`
-- [x] Resiliência: retry + circuit breaker (Resilience4j) na integração com o provider externo de taxas (mockado), com degradação graciosa — ver seção "Resiliência" abaixo e `ROADMAP.md`
-- [x] Estorno pela UI (Grid, com confirmação), cadastro de cedente inline no Painel, e containers 100% não-root (backend + frontend) — ver `ROADMAP.md`, Passo 15
-- [x] Grid de estado final e hardening do Painel: modal de confirmação + toast no estorno, liquidação estornada sai do extrato (a linha do estorno a representa e expande a operação de origem), filtro por tipo, taxa correta em cross-currency, validação de CPF/CNPJ e máscaras de valor — ver `ROADMAP.md`, Passo 16
-- [x] Dashboard do Grafana provisionado como código + métricas de negócio (`srm_liquidacoes*`/`srm_estornos*` por moeda) e histogramas de latência, com validação no smoke test do CI — ver `ROADMAP.md`, Passo 17
-
-## Como rodar (stack completa: API + banco + observabilidade)
-
-Pré-requisito: Docker + Docker Compose.
-
-```bash
-docker compose up -d --build
-```
-
-Sobe 5 containers: `postgres` (aplica as 11 migrations Flyway automaticamente no boot da API), `backend`, `frontend` (build de produção, servido por Nginx), `prometheus` e `grafana`.
-
-| Serviço | URL | Notas |
-|---|---|---|
-| Frontend | http://localhost:8081 | Nginx serve o build estático e faz proxy de `/api/*` pro backend |
-| API | http://localhost:8080 | |
-| Swagger UI | http://localhost:8080/swagger-ui/index.html | |
-| Health check | http://localhost:8080/actuator/health | |
-| Métricas (Prometheus scrape) | http://localhost:8080/actuator/prometheus | |
-| Prometheus | http://localhost:9090 | target `srm-credit-engine` já configurado |
-| Grafana | http://localhost:3000 | login `admin` / `admin`; datasource e dashboard **SRM Credit Engine** já provisionados (negócio, API, circuit breaker, runtime) |
-
-Para derrubar tudo (incluindo os volumes de dados): `docker compose down -v`.
-
-Logs estruturados (JSON, formato ECS) no console do backend: `docker compose logs -f backend`. Cada linha carrega `requestId` (correlaciona todas as linhas de uma mesma requisição HTTP) e, nas linhas de negócio, campos próprios (`recebivelId`, `valorLiquido`, `totalSucesso` etc.) como chaves estruturadas, não só texto.
-
-## Como rodar (backend isolado, sem Docker)
+<details>
+<summary><b>Backend isolado (Gradle)</b></summary>
 
 Pré-requisitos: Java 21 e um PostgreSQL acessível.
 
@@ -107,50 +109,17 @@ export DB_USER=srm
 export DB_PASSWORD=srm
 
 ./gradlew build     # compila e roda os testes
-./gradlew bootRun   # sobe a aplicação em http://localhost:8080, aplicando as migrations automaticamente
+./gradlew bootRun   # sobe em http://localhost:8080, aplicando as migrations
 ```
 
-> `./gradlew test` inclui 3 testes de integração (`*IT`: concorrência com Optimistic Locking, relatório com SQL nativo e resiliência do circuit breaker) que sobem um Postgres descartável via Testcontainers. Em ambientes com Docker Engine muito recente, o probe de compatibilidade do Testcontainers 1.21.x pode falhar na inicialização (não é um bug dos testes — eles rodam no CI). Por isso o hook de pre-push roda só os testes de unidade/slice (`--tests '*Test'`), deixando os `*IT` para o CI — um hook que sempre falha viraria um hook sempre pulado.
+> `./gradlew test` inclui 3 testes de integração (`*IT`: concorrência com Optimistic Locking, relatório com SQL nativo e resiliência do circuit breaker) que sobem um Postgres descartável via Testcontainers. Em ambientes com Docker Engine muito recente, o probe de compatibilidade do Testcontainers 1.21.x pode falhar na inicialização (não é um bug dos testes — eles rodam no CI). Por isso o hook de pre-push roda só os testes de unidade/slice (`--tests '*Test'`), deixando os `*IT` para o CI.
 
-## Principais endpoints
+</details>
 
-| Método | Rota | O quê |
-|---|---|---|
-| `POST` | `/api/cedentes` | Cadastra cedente |
-| `POST` | `/api/recebiveis/lote` | Recebe um lote, cria e liquida cada recebível numa transação própria — resposta sempre `200` com resultado por item |
-| `POST` | `/api/liquidacoes/{id}/estorno` | Estorna uma liquidação (nunca edita a original) |
-| `GET`/`POST` | `/api/taxas-cambio` | Consulta/registra taxa de câmbio vigente |
-| `GET`/`POST` | `/api/taxas-mercado` | Consulta/registra taxa de mercado (CDI/SOFR) vigente |
-| `GET` | `/api/relatorios/extrato-liquidacao` | Extrato paginado/filtrado (cedente, tipo, moeda, período) — 2 camadas, SQL nativo |
-| `POST` | `/api/recebiveis/simular` | Read-only: calcula o valor líquido sem persistir nada (usado pelo Painel do Operador) |
-| `GET` | `/api/moedas`, `/api/tipos-recebivel` | Catálogos (BRL/USD, Duplicata Mercantil/Cheque Pré-datado) |
-| `POST` | `/api/taxas/sincronizar` | Busca cotações no provider externo (mockado) via client com retry + circuit breaker e persiste — `503 PROVIDER_INDISPONIVEL` se o provider estiver fora |
-| `GET`/`PUT` | `/mock/fx-provider/*` | Provider externo **simulado** (fora do `/api`): cotações, knob de falha (`/config?failureRate=`) e contador de chamadas (`/stats`) |
+<details>
+<summary><b>Frontend isolado (Vite, hot reload)</b></summary>
 
-Contratos completos no Swagger UI.
-
-## Resiliência (retry + circuit breaker)
-
-A sincronização de taxas passa por um client HTTP protegido por **Resilience4j** (retry com backoff exponencial + circuit breaker, instância `fxProvider` no `application.yml`). Provider fora do ar degrada só a *atualização* de taxas — liquidação e simulação continuam com a última taxa vigente persistida (histórico append-only). Pra ver o circuito abrindo ao vivo:
-
-```bash
-curl -X PUT "http://localhost:8080/mock/fx-provider/config?failureRate=1.0"   # derruba o provider
-curl -X POST http://localhost:8080/api/taxas/sincronizar                      # 503 após 3 retries; repetir abre o circuito
-curl -s http://localhost:8080/actuator/prometheus | grep circuitbreaker_state # open = 1.0
-curl -X PUT "http://localhost:8080/mock/fx-provider/config?failureRate=0.0"   # provider volta; circuito fecha após o wait (10s) + 2 syncs bons
-```
-
-No `docker-compose`, um sync agendado (`FX_PROVIDER_SYNC_ENABLED=true`, a cada 60s) mantém o circuito ciclando e visível no Prometheus/Grafana sem intervenção manual.
-
-## Dashboard do Grafana
-
-O dashboard **SRM Credit Engine** (provisionado como código em `infra/grafana/provisioning/dashboards/`, carregado automaticamente no boot) organiza a observabilidade em 4 linhas: **Negócio** (liquidações/estornos e valor liquidado por moeda — métricas `srm_*` instrumentadas em `MetricasNegocio`), **API HTTP** (requisições/s por rota, latência p95 via histograma, erros 4xx/5xx), **Resiliência** (estado do circuit breaker `fxProvider` atual e ao longo do tempo, failure rate, retries, chamadas ao provider) e **Runtime** (heap, GC, CPU, pool de conexões). O ciclo do circuito descrito acima é visível ao vivo no painel de estado. Edições pela UI não persistem (`allowUiUpdates: false`) — o fluxo é exportar o JSON e commitar.
-
-Pra ver os painéis reagindo sob demanda, [`scripts/dashboard/`](./scripts/dashboard/README.md) tem 4 cenários prontos: `cenario1.sh` (ciclo completo do circuit breaker), `cenario2.sh` (rajada de erros 4xx), `cenario3.sh` (carga de requisições) e `cenario4.sh` (tráfego de negócio — liquidações + estornos).
-
-## Como rodar (frontend isolado, modo dev — hot reload)
-
-Pré-requisito: Node.js 22+ e o backend no ar (`docker compose up -d` na raiz, ou `./gradlew bootRun`) — o Vite tem um proxy de dev para `/api` → `localhost:8080` (o `docker-compose` acima já sobe o frontend como build de produção via Nginx; use este modo só quando estiver editando o frontend).
+Pré-requisito: Node.js 22+ e o backend no ar (`docker compose up -d` na raiz, ou `./gradlew bootRun`) — o Vite tem proxy de dev para `/api` → `localhost:8080`.
 
 ```bash
 cd frontend
@@ -158,25 +127,31 @@ npm install
 npm run dev   # http://localhost:5173
 ```
 
-Duas telas: **Painel do Operador** (`/painel`) — cadastra e liquida um recebível, com o valor líquido calculado em tempo real conforme o formulário é preenchido e cadastro de cedente inline (o cedente novo já sai selecionado) — e **Grid de Transações** (`/transacoes`) — histórico paginado com filtros por cedente/tipo/moeda/período refletidos na URL e estorno direto na tabela (modal de confirmação com os detalhes da transação; resultado via toast). A grid mostra o **estado final** de cada operação: liquidação já estornada não aparece — a linha do estorno a representa e expande a operação de origem ("Ver origem").
+</details>
 
-## CI/CD
+Os contratos da API estão todos no Swagger (`/swagger-ui/index.html`); o DDL do banco está versionado em `backend/src/main/resources/db/migration/`.
 
-`.github/workflows/ci.yml` — dispara em push/PR para `dev`/`main`/`prod` (e manualmente). 3 jobs: `backend` (`spotlessCheck` + `./gradlew build`, incluindo os 3 testes de integração com Testcontainers — concorrência, relatório e resiliência), `frontend` (`lint` + `build` + `test`), e `docker-compose-smoke-test` (sobe a stack completa via `docker compose up -d --build` e valida que API e frontend respondem de verdade, não só que cada lado builda isolado).
+## Observabilidade e resiliência
 
-## Estratégia de branching
+- **Logs estruturados** (JSON, formato ECS) com `requestId` correlacionando todas as linhas de uma mesma requisição: `docker compose logs -f backend`.
+- **Dashboard do Grafana** provisionado como código, em 4 linhas: negócio (liquidações/estornos e valor por moeda — métricas instrumentadas no domínio), API (RPS, latência p95, erros), resiliência (estado do circuit breaker ao vivo) e runtime (JVM, pool de conexões).
+- **Resiliência**: a integração com o provider de câmbio (simulado) tem retry com backoff + circuit breaker; se o provider cai, só a atualização de taxas degrada — liquidação e simulação seguem com a última taxa vigente.
+- Pra ver tudo isso reagindo, use os [cenários de demonstração](./scripts/dashboard/README.md) — do circuit breaker abrindo a um pico de requisições por rota.
+- O CI valida a stack completa a cada push, incluindo Prometheus, Grafana e o dashboard provisionado.
 
-Três branches, papéis diferentes — nenhum deploy automatizado existe hoje atrás de nenhuma delas (o CI acima só valida, não publica em lugar nenhum):
+## Git na prática
 
-- **`dev`** — branch de trabalho. Todo o desenvolvimento acontece aqui, com Conventional Commits atômicos.
-- **`main`** — branch de release. Recebe `dev` via Pull Request quando há um incremento coeso pronto pra virar versão (ex.: [PR #1](https://github.com/Narvaal/SRMCreditEngine/pull/1), a primeira entrega completa). Cada promoção relevante ganha uma tag semântica (`v1.0.0`, ...).
-- **`prod`** — existe especificamente pra demonstrar o exercício de gestão de crise pedido no nível Especialista do desafio (`CLAUDE.md`, seção 6: simular um bug crítico e reagir com `git revert` seguro ou `git cherry-pick` de hotfix). Não representa um ambiente real rodando em produção — é um exercício de processo, documentado como tal (ver `ROADMAP.md`, Passo 12, pra um caso real de hotfix cherry-picked de `main` pra `prod`, `v1.0.1`).
+Trunk-based sobre `dev` com **Conventional Commits** atômicos; cada entrega coesa vira **PR pra `main`** (merge commit) com **tag semântica e Release** ([v1.0.0 → v1.3.0](https://github.com/Narvaal/SRMCreditEngine/releases)). Hooks de pre-commit (lint), commit-msg (convenção) e pre-push (testes); histórico organizado com **rebase interativo** antes dos merges. A branch `prod` existe só pra demonstrar o exercício de gestão de crise do enunciado — um hotfix real levado de `main` pra `prod` via `git cherry-pick` (`v1.0.1`, detalhes no [`ROADMAP.md`](./ROADMAP.md), Passo 12).
+
+## IA como copiloto
+
+O projeto foi construído com Claude Code como copiloto, seguindo a política do enunciado: as decisões e a responsabilidade são do autor. O [`AI_USAGE.md`](./AI_USAGE.md) registra, entrega por entrega, os prompts estratégicos, os casos em que a IA errou (e como foi corrigido) e a análise crítica de onde ela ajudou ou atrapalhou.
 
 ## Documentação
 
-- [`ROADMAP.md`](./ROADMAP.md) — entendimento do problema, decisões de domínio e progresso técnico, passo a passo.
-- [`docs/diagrama-er.md`](./docs/diagrama-er.md) — diagrama ER, decisões de tipo/precisão numérica e gaps conhecidos do modelo de dados.
-- [`docs/diagrama-c4.md`](./docs/diagrama-c4.md) — diagrama C4 (Nível 1 — Contexto, Nível 2 — Container).
-- [`docs/criterios-aceite.md`](./docs/criterios-aceite.md) — critérios de aceite formais (usabilidade, segurança, desempenho, escalabilidade), com status e evidência por item.
-- [`AI_USAGE.md`](./AI_USAGE.md) — uso de IA no desenvolvimento (prompts, correções, análise crítica).
-- [`CLAUDE.md`](./CLAUDE.md) — enunciado completo do desafio técnico.
+- [`ROADMAP.md`](./ROADMAP.md) — a história completa: decisões de domínio e cada passo técnico (1–17).
+- [`docs/diagrama-er.md`](./docs/diagrama-er.md) — modelo de dados, precisão numérica e gaps conhecidos.
+- [`docs/diagrama-c4.md`](./docs/diagrama-c4.md) — arquitetura (Contexto e Container).
+- [`docs/criterios-aceite.md`](./docs/criterios-aceite.md) — usabilidade, segurança, desempenho e escalabilidade, item a item.
+- [`AI_USAGE.md`](./AI_USAGE.md) — uso de IA no desenvolvimento.
+- [`CLAUDE.md`](./CLAUDE.md) — o enunciado completo do desafio.
